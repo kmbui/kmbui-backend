@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it } from "bun:test";
+import { t } from "elysia";
+import { TypeCompiler } from "@sinclair/typebox/compiler";
+import { beforeAll, describe, expect, it } from "bun:test";
 import { apiMetadata, createApp } from "../src";
 import Database from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import z from "zod";
 import { key_requests } from "../src/database/schema";
 
 const BASE_URL: string = "http://localhost:3000";
@@ -27,13 +28,23 @@ describe("Call home route", () => {
 });
 
 describe("Create a valid API key request", () => {
-  let response: Response;
-  let body: { receipt: string };
+  const typeboxResponseBody = t.Object({
+    receipt: t.String(),
+  });
 
-  beforeEach(async () => {
-    response = await app.handle(
-      new Request(`${BASE_URL}/auth/key-request`, {
+  const validator = TypeCompiler.Compile(typeboxResponseBody);
+
+  type ResponseBody = typeof typeboxResponseBody.static;
+
+  let body: ResponseBody;
+
+  beforeAll(async () => {
+    const response = await app.handle(
+      new Request(`${BASE_URL}/auth/key-requests`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           requesterName: "tober",
           requestDescription: "I need this API key for testing purposes",
@@ -41,21 +52,57 @@ describe("Create a valid API key request", () => {
         }),
       }),
     );
+
+    body = await response.json();
   });
 
   it("returns a valid receipt", async () => {
-    body = z
-      .object({
-        receipt: z.string(),
-      })
-      .parse(response);
+    const isValid = validator.Check(body);
 
-    expect(body).not.toThrowError();
+    expect(body.receipt).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+    expect(isValid).toBe(true);
   });
 
   it("creates an entry in the database", async () => {
-    db.select()
+    const entry = db
+      .select()
       .from(key_requests)
-      .where(eq(key_requests.receipt, body.receipt));
+      .where(eq(key_requests.receipt, body.receipt))
+      .get();
+
+    expect(entry).toBeDefined();
+  });
+});
+
+describe("Create an invalid API key request", () => {
+  let response: Response;
+  let body: any;
+  beforeAll(async () => {
+    response = await app.handle(
+      new Request(`${BASE_URL}/auth/key-requests`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requesterName: "tober",
+          requestDescription: "I need this API key for testing purposes",
+        }),
+      }),
+    );
+
+    body = await response.json();
+  });
+
+  it("returns a 422 Unprocessable Entity response", () => {
+    expect(response?.status).toBe(422);
+  });
+
+  it("returns a proper error message", () => {
+    expect(body?.errors.password).toBe(
+      "Expected property 'password' to be string but found: undefined",
+    );
   });
 });

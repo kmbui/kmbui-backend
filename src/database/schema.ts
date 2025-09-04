@@ -2,12 +2,12 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 const timestamps = {
   updated_at: integer({ mode: "timestamp" }),
-  created_at: integer({ mode: "timestamp" }).notNull(),
+  created_at: integer({ mode: "timestamp" }).default(new Date()).notNull(),
   deleted_at: integer({ mode: "timestamp" }),
 };
 
 export const key_requests = sqliteTable("key_requests", {
-  id: integer().primaryKey(),
+  id: integer().primaryKey({ autoIncrement: true }),
   requesterName: text("requester_name").notNull(),
   requestDescription: text("request_description").notNull(),
   receipt: text().notNull(),
