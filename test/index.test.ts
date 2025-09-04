@@ -79,6 +79,7 @@ describe("Create a valid API key request", () => {
 describe("Create an invalid API key request", () => {
   let response: Response;
   let body: any;
+
   beforeAll(async () => {
     response = await app.handle(
       new Request(`${BASE_URL}/key-requests`, {
@@ -104,5 +105,46 @@ describe("Create an invalid API key request", () => {
     expect(body?.errors.password).toBe(
       "Expected property 'password' to be string but found: undefined",
     );
+  });
+});
+
+describe("Fetch all API key requests with admin password", () => {
+  let response: Response;
+
+  beforeAll(async () => {
+    response = await app.handle(
+      new Request(`${BASE_URL}/key-requests`, {
+        method: "GET",
+        headers: { Authorization: "admin123" },
+      }),
+    );
+  });
+
+  it("returns a 200 OK response", () => {
+    expect(response.status).toBe(200);
+  });
+
+  it("returns an array of API key requests", async () => {
+    const body = await response.json();
+    expect(body?.data).arrayOf(expect.anything());
+  });
+});
+
+describe("Fetch all API key requests without admin password", () => {
+  let response: Response;
+
+  beforeAll(async () => {
+    response = await app.handle(
+      new Request(`${BASE_URL}/key-requests`, { method: "GET" }),
+    );
+  });
+
+  it("returns a 401 Unauthorized response", () => {
+    expect(response.status).toBe(401);
+  });
+
+  it("returns nothing in the response body", async () => {
+    const body = await response.json();
+    expect(body?.message).toBeUndefined();
   });
 });
