@@ -40,7 +40,7 @@ describe("Create a valid API key request", () => {
 
   beforeAll(async () => {
     const response = await app.handle(
-      new Request(`${BASE_URL}/auth/key-requests`, {
+      new Request(`${BASE_URL}/key-requests`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -81,7 +81,7 @@ describe("Create an invalid API key request", () => {
   let body: any;
   beforeAll(async () => {
     response = await app.handle(
-      new Request(`${BASE_URL}/auth/key-requests`, {
+      new Request(`${BASE_URL}/key-requests`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
