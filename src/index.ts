@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import { keyRequestHandler } from "./handlers/key-requests";
+import { keyRequestController } from "./key-requests/controller";
 import { db } from "./database";
 import { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { errorHandler } from "./handlers/error";
@@ -14,7 +14,7 @@ export function createApp(db: BunSQLiteDatabase) {
   const app = new Elysia()
     .use(errorHandler)
     .get("/", () => apiMetadata)
-    .use(keyRequestHandler(db))
+    .use(keyRequestController(db))
     .use(openapi({ path: "/openapi" }));
 
   return app;

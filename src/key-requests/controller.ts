@@ -1,9 +1,14 @@
 import { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { eq } from "drizzle-orm";
 import Elysia, { t } from "elysia";
-import { admin_users, key_requests, api_keys } from "../database/schema";
+import { key_requests, api_keys } from "../database/schema";
+import {
+  getCredsFromHeader,
+  validateAdminUser,
+  generateSecureRandomString,
+} from "./utils";
 
-export function keyRequestHandler(db: BunSQLiteDatabase) {
+export function keyRequestController(db: BunSQLiteDatabase) {
   return new Elysia().state("db", db).group("/key-requests", (app) =>
     app
       .post(
@@ -48,28 +53,16 @@ export function keyRequestHandler(db: BunSQLiteDatabase) {
             return new Response(null, { status: 401 });
           }
 
-          const authToken = authorization.split(" ")[1];
+          const { username, password } = getCredsFromHeader(authorization);
 
-          const [username, password] = atob(authToken).split(":");
-
-          const result = await db
-            .select()
-            .from(admin_users)
-            .where(eq(admin_users.username, username));
-
-          if (result.length === 0) {
-            return new Response(null, { status: 401 });
-          } else if (result.length > 1) {
-            return new Response(null, { status: 500 });
-          }
-
-          const isValidAdmin = await Bun.password.verify(
+          const adminValidationResult = await validateAdminUser(
+            db,
+            username,
             password,
-            result[0].hashedPassword,
           );
 
-          if (!isValidAdmin) {
-            return new Response(null, { status: 401 });
+          if (adminValidationResult !== null) {
+            return adminValidationResult;
           }
 
           const keyRequests = await db
@@ -108,38 +101,20 @@ export function keyRequestHandler(db: BunSQLiteDatabase) {
             return new Response(null, { status: 401 });
           }
 
-          const authToken = authorization.split(" ")[1];
+          const { username, password } = getCredsFromHeader(authorization);
 
-          const [username, password] = atob(authToken).split(":");
-
-          const result = await db
-            .select()
-            .from(admin_users)
-            .where(eq(admin_users.username, username));
-
-          if (result.length === 0) {
-            return new Response(null, { status: 401 });
-          } else if (result.length > 1) {
-            return new Response(null, { status: 500 });
-          }
-
-          const isValidAdmin = await Bun.password.verify(
+          const adminValidationResult = await validateAdminUser(
+            db,
+            username,
             password,
-            result[0].hashedPassword,
           );
 
-          if (!isValidAdmin) {
-            return new Response(null, { status: 401 });
+          if (adminValidationResult !== null) {
+            return adminValidationResult;
           }
-          if (body.approved) {
-            const alphabet = "abcdefghijkmnpqrstuvwxyz23456789";
-            const randomBits = new Uint8Array(128);
-            crypto.getRandomValues(randomBits);
 
-            let keyString = "";
-            for (let i = 0; i < randomBits.length; i++) {
-              keyString += alphabet[randomBits[i] >> 3];
-            }
+          if (body.approved) {
+            const keyString = generateSecureRandomString(64);
 
             await db.transaction(async (tx) => {
               const affectedRows = await db

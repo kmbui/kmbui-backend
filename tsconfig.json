@@ -106,7 +106,7 @@
     "src/**/*.ts", // Only include your source files
     "test/**/*.ts" // And your test files
   ],
-  // ⛔️ Be aggressive about what to exclude
+  // Be aggressive about what to exclude
   "exclude": [
     "node_modules",
     "dist",
