@@ -3,6 +3,7 @@ import { keyRequestHandler } from "./handlers/key-requests";
 import { db } from "./database";
 import { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { errorHandler } from "./handlers/error";
+import { openapi } from "@elysiajs/openapi";
 
 export const apiMetadata = {
   name: "REST API to KMBUI's backend",
@@ -13,7 +14,8 @@ export function createApp(db: BunSQLiteDatabase) {
   const app = new Elysia()
     .use(errorHandler)
     .get("/", () => apiMetadata)
-    .use(keyRequestHandler(db));
+    .use(keyRequestHandler(db))
+    .use(openapi({ path: "/openapi" }));
 
   return app;
 }
@@ -21,5 +23,5 @@ export function createApp(db: BunSQLiteDatabase) {
 export const app = createApp(db).listen({ idleTimeout: 10, port: 3000 });
 
 console.log(
-  `🦊 Elysia is running at http://${app.server?.hostname}:${app.server?.port}`,
+  `KMBUI backend is running at http://${app.server?.hostname}:${app.server?.port}`,
 );

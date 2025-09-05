@@ -1,4 +1,5 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 const timestamps = {
   updated_at: integer({ mode: "timestamp" }),
@@ -17,7 +18,7 @@ export const key_requests = sqliteTable("key_requests", {
 });
 
 export const api_keys = sqliteTable("api_keys", {
-  userId: text("user_id").primaryKey(),
+  username: text("user_id").primaryKey(),
   keyString: text("key_string").notNull().unique(),
   requestId: integer("request_id")
     .references(() => key_requests.id)
@@ -25,5 +26,26 @@ export const api_keys = sqliteTable("api_keys", {
   ...timestamps,
 });
 
-export type KeyRequest = typeof key_requests.$inferSelect;
-export type APIKey = typeof api_keys.$inferSelect;
+export const admin_users = sqliteTable("admin_users", {
+  username: text("user_id").primaryKey(),
+  hashedPassword: text("hashed_password").notNull(),
+  ...timestamps,
+});
+
+export const keyUsageLogs = sqliteTable(
+  "key_usage_logs",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    timestamp: integer({ mode: "timestamp" }).default(new Date()).notNull(),
+    apiUserId: text("api_user_id").references(() => api_keys.username),
+    adminUserId: text("admin_user_id").references(() => admin_users.username),
+    endpoint: text().notNull(),
+    status: integer().notNull(),
+  },
+  (table) => [
+    check(
+      "id_check",
+      sql`(${table.adminUserId} IS NOT NULL) + (${table.apiUserId} IS NOT NULL) = 1`,
+    ),
+  ],
+);

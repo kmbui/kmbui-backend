@@ -8,6 +8,13 @@
       "when": 1756905431311,
       "tag": "0000_petite_jimmy_woo",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1757043416645,
+      "tag": "0001_rare_scorpion",
+      "breakpoints": true
     }
   ]
 }

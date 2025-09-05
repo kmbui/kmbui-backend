@@ -6,7 +6,7 @@ import Database from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { key_requests } from "../src/database/schema";
+import { key_requests, admin_users } from "../src/database/schema";
 
 const BASE_URL: string = "http://localhost:3000";
 
@@ -14,6 +14,12 @@ const db = drizzle(new Database(":memory:"));
 migrate(db, {
   migrationsFolder: "./drizzle",
 });
+
+const passwordHash = await Bun.password.hash("admin123");
+
+await db
+  .insert(admin_users)
+  .values({ username: "admin", hashedPassword: passwordHash });
 
 const app = createApp(db).listen(3000);
 
@@ -115,7 +121,7 @@ describe("Fetch all API key requests with admin password", () => {
     response = await app.handle(
       new Request(`${BASE_URL}/key-requests`, {
         method: "GET",
-        headers: { Authorization: "admin123" },
+        headers: { Authorization: "Basic YWRtaW46YWRtaW4xMjM=" },
       }),
     );
   });
@@ -126,11 +132,11 @@ describe("Fetch all API key requests with admin password", () => {
 
   it("returns an array of API key requests", async () => {
     const body = await response.json();
-    expect(body?.data).arrayOf(expect.anything());
+    expect(body).toBeArray();
   });
 });
 
-describe("Fetch all API key requests without admin password", () => {
+describe("Fetch all API key requests without authorization header", () => {
   let response: Response;
 
   beforeAll(async () => {
@@ -144,7 +150,6 @@ describe("Fetch all API key requests without admin password", () => {
   });
 
   it("returns nothing in the response body", async () => {
-    const body = await response.json();
-    expect(body?.message).toBeUndefined();
+    expect(await response.text()).toHaveLength(0);
   });
 });
