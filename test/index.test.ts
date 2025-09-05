@@ -1,19 +1,17 @@
 import { t } from "elysia";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import {
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { apiMetadata, createApp } from "../src";
 import Database from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { api_keys, key_requests, admin_users } from "../src/database/schema";
+import {
+  api_keys,
+  key_requests,
+  admin_users,
+  KeyRequest,
+} from "../src/database/schema";
 
 const BASE_URL: string = "http://localhost:3000";
 
@@ -168,6 +166,7 @@ describe("Fetch all API key requests without authorization header", () => {
 
 describe("Approve a valid API key request as admin", async () => {
   let response: Response;
+  let keyRequest: KeyRequest;
 
   beforeEach(async () => {
     await app.handle(
@@ -184,10 +183,15 @@ describe("Approve a valid API key request as admin", async () => {
       }),
     );
 
+    keyRequest = db.select().from(key_requests).get()!;
+
     response = await app.handle(
-      new Request(`${BASE_URL}/key-requests/1`, {
+      new Request(`${BASE_URL}/key-requests/${keyRequest!.id}`, {
         method: "PATCH",
-        headers: { Authorization: "Basic YWRtaW46YWRtaW4xMjM=" },
+        headers: {
+          Authorization: "Basic YWRtaW46YWRtaW4xMjM=",
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           username: "tober from testing",
           approved: true,
@@ -204,7 +208,7 @@ describe("Approve a valid API key request as admin", async () => {
     const targetAPIKey = db
       .select()
       .from(api_keys)
-      .where(eq(api_keys.requestId, 1))
+      .where(eq(api_keys.requestId, keyRequest!.id))
       .get();
 
     expect(targetAPIKey).not.toBeUndefined();
@@ -214,7 +218,7 @@ describe("Approve a valid API key request as admin", async () => {
     const targetKeyRequest = db
       .select()
       .from(key_requests)
-      .where(eq(key_requests.id, 1))
+      .where(eq(key_requests.id, keyRequest!.id))
       .get();
 
     expect(targetKeyRequest?.status).toBe("approved");
@@ -223,6 +227,7 @@ describe("Approve a valid API key request as admin", async () => {
 
 describe("Deny a valid API key request as admin", async () => {
   let response: Response;
+  let keyRequest: KeyRequest;
 
   beforeEach(async () => {
     await app.handle(
@@ -239,10 +244,15 @@ describe("Deny a valid API key request as admin", async () => {
       }),
     );
 
+    keyRequest = db.select().from(key_requests).get()!;
+
     response = await app.handle(
-      new Request(`${BASE_URL}/key-requests/1`, {
+      new Request(`${BASE_URL}/key-requests/${keyRequest!.id}`, {
         method: "PATCH",
-        headers: { Authorization: "Basic YWRtaW46YWRtaW4xMjM=" },
+        headers: {
+          Authorization: "Basic YWRtaW46YWRtaW4xMjM=",
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           approved: false,
         }),
@@ -258,7 +268,7 @@ describe("Deny a valid API key request as admin", async () => {
     const targetAPIKey = db
       .select()
       .from(api_keys)
-      .where(eq(api_keys.requestId, 1))
+      .where(eq(api_keys.requestId, keyRequest!.id))
       .get();
 
     expect(targetAPIKey).toBeUndefined();
@@ -268,9 +278,69 @@ describe("Deny a valid API key request as admin", async () => {
     const targetKeyRequest = db
       .select()
       .from(key_requests)
-      .where(eq(key_requests.id, 1))
+      .where(eq(key_requests.id, keyRequest!.id))
       .get();
 
     expect(targetKeyRequest?.status).toBe("denied");
+  });
+});
+
+describe("Attempt to process a valid API key request wihout admin credentials", async () => {
+  let response: Response;
+  let keyRequest: KeyRequest;
+
+  beforeEach(async () => {
+    await app.handle(
+      new Request(`${BASE_URL}/key-requests`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requesterName: "tober",
+          requestDescription: "I need this API key for testing purposes",
+          password: "abc123",
+        }),
+      }),
+    );
+
+    keyRequest = db.select().from(key_requests).get()!;
+
+    response = await app.handle(
+      new Request(`${BASE_URL}/key-requests/${keyRequest!.id}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: "Basic YWRtaW46dGVzdDEyMyAtbgo=",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          approved: false,
+        }),
+      }),
+    );
+  });
+
+  it("fails with a 401 response", () => {
+    expect(response?.status).toBe(401);
+  });
+
+  it("doesn't create an API key corresponding to the key request ID", async () => {
+    const targetAPIKey = db
+      .select()
+      .from(api_keys)
+      .where(eq(api_keys.requestId, keyRequest!.id))
+      .get();
+
+    expect(targetAPIKey).toBeUndefined();
+  });
+
+  it("maintains the key request's status of 'pending'", () => {
+    const targetKeyRequest = db
+      .select()
+      .from(key_requests)
+      .where(eq(key_requests.id, keyRequest!.id))
+      .get();
+
+    expect(targetKeyRequest?.status).toBe("pending");
   });
 });

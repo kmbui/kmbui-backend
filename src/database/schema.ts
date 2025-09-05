@@ -51,3 +51,5 @@ export const keyUsageLogs = sqliteTable(
     ),
   ],
 );
+
+export type KeyRequest = typeof key_requests.$inferSelect;
