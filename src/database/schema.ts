@@ -13,12 +13,14 @@ export const key_requests = sqliteTable("key_requests", {
   requestDescription: text("request_description").notNull(),
   receipt: text().notNull(),
   hashedPassword: text("hashed_password").notNull(),
-  approved: integer({ mode: "boolean" }).default(false).notNull(),
+  status: text({ enum: ["pending", "denied", "approved", "expired"] })
+    .default("pending")
+    .notNull(),
   ...timestamps,
 });
 
 export const api_keys = sqliteTable("api_keys", {
-  username: text("user_id").primaryKey(),
+  username: text().primaryKey(),
   keyString: text("key_string").notNull().unique(),
   requestId: integer("request_id")
     .references(() => key_requests.id)
@@ -27,7 +29,7 @@ export const api_keys = sqliteTable("api_keys", {
 });
 
 export const admin_users = sqliteTable("admin_users", {
-  username: text("user_id").primaryKey(),
+  username: text().primaryKey(),
   hashedPassword: text("hashed_password").notNull(),
   ...timestamps,
 });
