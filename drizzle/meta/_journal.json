@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1756905431311,
-      "tag": "0000_petite_jimmy_woo",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1757043416645,
-      "tag": "0001_rare_scorpion",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1757065914331,
-      "tag": "0002_melted_legion",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1757067306623,
-      "tag": "0003_easy_bushwacker",
+      "when": 1757131467971,
+      "tag": "0000_green_sauron",
       "breakpoints": true
     }
   ]

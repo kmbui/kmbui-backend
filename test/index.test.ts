@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { apiMetadata, createApp } from "../src";
 import Database from "bun:sqlite";
 import { drizzle } from "drizzle-orm/bun-sqlite";
-import { eq } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import {
   api_keys,
@@ -342,5 +342,85 @@ describe("Attempt to process a valid API key request wihout admin credentials", 
       .get();
 
     expect(targetKeyRequest?.status).toBe("pending");
+  });
+});
+
+describe("Attempt to claim approved API key request", () => {
+  const typeboxKeyRequestResponseBody = t.Object({ receipt: t.String() });
+  const typeboxResponseBody = t.Object({ key: t.String() });
+
+  type KeyRequestResponseBody = typeof typeboxKeyRequestResponseBody.static;
+  type ResponseBody = typeof typeboxResponseBody.static;
+
+  let response: Response;
+  let keyRequestBody: KeyRequestResponseBody;
+  let body: ResponseBody;
+
+  beforeEach(async () => {
+    const keyRequestResponse = await app.handle(
+      new Request(`${BASE_URL}/key-requests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requesterName: "tober",
+          requestDescription: "I need this API key for testing purposes",
+          password: "abc123",
+        }),
+      }),
+    );
+
+    keyRequestBody = await keyRequestResponse.json();
+
+    const keyRequest = db
+      .select()
+      .from(key_requests)
+      .where(eq(key_requests.receipt, keyRequestBody.receipt))
+      .get();
+
+    await app.handle(
+      new Request(`${BASE_URL}/key-requests/${keyRequest!.id}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: "Basic YWRtaW46YWRtaW4xMjM=",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: "tober from testing",
+          approved: true,
+        }),
+      }),
+    );
+
+    response = await app.handle(
+      new Request(`${BASE_URL}/key-claims`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          receipt: keyRequestBody.receipt,
+          password: "abc123",
+        }),
+      }),
+    );
+  });
+
+  it("returns a 200 OK response", () => {
+    expect(response.status).toBe(200);
+  });
+
+  it("returns a string", async () => {
+    body = await response.json();
+    expect(body.key).toBeString();
+  });
+
+  it("returns an existing API key", async () => {
+    body = await response.json();
+
+    const result = db
+      .select({ count: count() })
+      .from(api_keys)
+      .where(eq(api_keys.keyString, body.key))
+      .get();
+
+    expect(result?.count).toBe(1);
   });
 });

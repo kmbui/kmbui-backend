@@ -1,14 +1,60 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "df42ffff-d257-44b0-85b4-ea955a7080b9",
+  "id": "5be8b950-192c-48dd-9144-f156f96eceb5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
+    "admin_users": {
+      "name": "admin_users",
+      "columns": {
+        "username": {
+          "name": "username",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "hashed_password": {
+          "name": "hashed_password",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'\"2025-09-06T04:04:27.960Z\"'"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "api_keys": {
       "name": "api_keys",
       "columns": {
-        "user_id": {
-          "name": "user_id",
+        "username": {
+          "name": "username",
           "type": "text",
           "primaryKey": true,
           "notNull": true,
@@ -40,7 +86,8 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "'\"2025-09-06T04:04:27.960Z\"'"
         },
         "deleted_at": {
           "name": "deleted_at",
@@ -78,6 +125,91 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "key_usage_logs": {
+      "name": "key_usage_logs",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'\"2025-09-06T04:04:27.962Z\"'"
+        },
+        "api_user_id": {
+          "name": "api_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "admin_user_id": {
+          "name": "admin_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "endpoint": {
+          "name": "endpoint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "key_usage_logs_api_user_id_api_keys_username_fk": {
+          "name": "key_usage_logs_api_user_id_api_keys_username_fk",
+          "tableFrom": "key_usage_logs",
+          "tableTo": "api_keys",
+          "columnsFrom": [
+            "api_user_id"
+          ],
+          "columnsTo": [
+            "username"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "key_usage_logs_admin_user_id_admin_users_username_fk": {
+          "name": "key_usage_logs_admin_user_id_admin_users_username_fk",
+          "tableFrom": "key_usage_logs",
+          "tableTo": "admin_users",
+          "columnsFrom": [
+            "admin_user_id"
+          ],
+          "columnsTo": [
+            "username"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "id_check": {
+          "name": "id_check",
+          "value": "(\"key_usage_logs\".\"admin_user_id\" IS NOT NULL) + (\"key_usage_logs\".\"api_user_id\" IS NOT NULL) = 1"
+        }
+      }
+    },
     "key_requests": {
       "name": "key_requests",
       "columns": {
@@ -86,7 +218,7 @@
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": true
         },
         "requester_name": {
           "name": "requester_name",
@@ -116,13 +248,13 @@
           "notNull": true,
           "autoincrement": false
         },
-        "approved": {
-          "name": "approved",
-          "type": "integer",
+        "status": {
+          "name": "status",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": false
+          "default": "'pending'"
         },
         "updated_at": {
           "name": "updated_at",
@@ -136,7 +268,8 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "'\"2025-09-06T04:04:27.960Z\"'"
         },
         "deleted_at": {
           "name": "deleted_at",
