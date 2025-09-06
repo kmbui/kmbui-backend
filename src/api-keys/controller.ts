@@ -8,10 +8,10 @@ import {
   generateSecureRandomString,
 } from "./utils";
 
-export function keyRequestController(db: BunSQLiteDatabase) {
+export function apiKeyController(db: BunSQLiteDatabase) {
   return new Elysia()
     .state("db", db)
-    .group("/key-requests", (app) =>
+    .group("/key-requests", { detail: { tags: ["API keys"] } }, (app) =>
       app
         .post(
           "/",
@@ -182,7 +182,7 @@ export function keyRequestController(db: BunSQLiteDatabase) {
           },
         ),
     )
-    .group("/key-claims", (app) =>
+    .group("/key-claims", { detail: { tags: ["API keys"] } }, (app) =>
       app.post(
         "/",
         async ({ body: { receipt, password } }) => {

@@ -1,5 +1,5 @@
 import { Elysia } from "elysia";
-import { keyRequestController } from "./key-requests/controller";
+import { apiKeyController } from "./api-keys/controller";
 import { db } from "./database";
 import { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { errorHandler } from "./handlers/error";
@@ -13,9 +13,26 @@ export const apiMetadata = {
 export function createApp(db: BunSQLiteDatabase) {
   const app = new Elysia()
     .use(errorHandler)
-    .get("/", () => apiMetadata)
-    .use(keyRequestController(db))
-    .use(openapi({ path: "/openapi" }));
+    .get("/", () => apiMetadata, { detail: { tags: ["General"] } })
+    .use(apiKeyController(db))
+    .use(
+      openapi({
+        path: "/openapi",
+        documentation: {
+          tags: [
+            {
+              name: "General",
+              description: "General information about the API",
+            },
+            {
+              name: "API keys",
+              description:
+                "Endpoints to handle API key creation and moderation",
+            },
+          ],
+        },
+      }),
+    );
 
   return app;
 }
