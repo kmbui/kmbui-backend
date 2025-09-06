@@ -15,12 +15,21 @@ export function generateSecureRandomString(length: number) {
   return keyString;
 }
 
-export function getCredsFromHeader(authHeader: string) {
-  const authToken = authHeader.split(" ")[1];
+export function getCredsFromHeader(authHeader: string): {
+  errorResponse: Response | null;
+  credentials: { username: string; password: string } | null;
+} {
+  let errorResponse = null;
+  let credentials = null;
+  try {
+    const authToken = authHeader.split(" ")[1];
+    const [username, password] = atob(authToken).split(":");
+    credentials = { username, password };
+  } catch {
+    errorResponse = new Response(null, { status: 401 });
+  }
 
-  const [username, password] = atob(authToken).split(":");
-
-  return { username, password };
+  return { errorResponse, credentials };
 }
 
 export async function validateAdminUser(

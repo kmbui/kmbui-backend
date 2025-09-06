@@ -124,7 +124,7 @@ describe("Create an invalid API key request", () => {
   });
 });
 
-describe("Fetch all API key requests with admin password", () => {
+describe("Fetch all API key requests with valid admin credentials", () => {
   let response: Response;
 
   beforeEach(async () => {
@@ -143,6 +143,72 @@ describe("Fetch all API key requests with admin password", () => {
   it("returns an array of API key requests", async () => {
     const body = await response.json();
     expect(body).toBeArray();
+  });
+});
+
+describe("Fetch all API key requests with broken authorization header", () => {
+  let response: Response;
+
+  beforeEach(async () => {
+    response = await app.handle(
+      new Request(`${BASE_URL}/key-requests`, {
+        method: "GET",
+        headers: { Authorization: "Basic InvalidAdminCreds" },
+      }),
+    );
+  });
+
+  it("returns a 401 Unauthorized response", () => {
+    expect(response.status).toBe(401);
+  });
+
+  it("returns an empty response body", async () => {
+    const body = await response.text();
+    expect(body.length).toBe(0);
+  });
+});
+
+describe("Fetch all API key requests with invalid admin username", () => {
+  let response: Response;
+
+  beforeEach(async () => {
+    response = await app.handle(
+      new Request(`${BASE_URL}/key-requests`, {
+        method: "GET",
+        headers: { Authorization: "Basic bWluYWg6YWRtaW4xMjM=" },
+      }),
+    );
+  });
+
+  it("returns a 401 Unauthorized response", () => {
+    expect(response.status).toBe(401);
+  });
+
+  it("returns an empty response body", async () => {
+    const body = await response.text();
+    expect(body.length).toBe(0);
+  });
+});
+
+describe("Fetch all API key requests with invalid admin password", () => {
+  let response: Response;
+
+  beforeEach(async () => {
+    response = await app.handle(
+      new Request(`${BASE_URL}/key-requests`, {
+        method: "GET",
+        headers: { Authorization: "Basic YWRtaW46YWRtaW4zMjE=" },
+      }),
+    );
+  });
+
+  it("returns a 401 Unauthorized response", () => {
+    expect(response.status).toBe(401);
+  });
+
+  it("returns an empty response body", async () => {
+    const body = await response.text();
+    expect(body.length).toBe(0);
   });
 });
 
@@ -285,6 +351,63 @@ describe("Deny a valid API key request as admin", async () => {
   });
 });
 
+describe("Attempt to approve a nonexistent API key request as admin", async () => {
+  let response: Response;
+
+  beforeEach(async () => {
+    response = await app.handle(
+      new Request(`${BASE_URL}/key-requests/1`, {
+        method: "PATCH",
+        headers: {
+          Authorization: "Basic YWRtaW46YWRtaW4xMjM=",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: "tober from testing",
+          approved: true,
+        }),
+      }),
+    );
+  });
+
+  it("fails with a 404 response", () => {
+    expect(response?.status).toBe(404);
+  });
+
+  it("creates nothing in the database", async () => {
+    const targetAPIKey = await db.select().from(api_keys);
+
+    expect(targetAPIKey.length).toBe(0);
+  });
+});
+
+describe("Attempt to approve an API key request without authorization header", () => {
+  let response: Response;
+
+  beforeEach(async () => {
+    response = await app.handle(
+      new Request(`${BASE_URL}/key-requests/1`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: "tober from testing",
+          approved: true,
+        }),
+      }),
+    );
+  });
+
+  it("returns a 401 Unauthorized response", () => {
+    expect(response.status).toBe(401);
+  });
+
+  it("returns nothing in the response body", async () => {
+    expect(await response.text()).toHaveLength(0);
+  });
+});
+
 describe("Attempt to process a valid API key request wihout admin credentials", async () => {
   let response: Response;
   let keyRequest: KeyRequest;
@@ -347,14 +470,11 @@ describe("Attempt to process a valid API key request wihout admin credentials", 
 
 describe("Attempt to claim approved API key request", () => {
   const typeboxKeyRequestResponseBody = t.Object({ receipt: t.String() });
-  const typeboxResponseBody = t.Object({ key: t.String() });
 
   type KeyRequestResponseBody = typeof typeboxKeyRequestResponseBody.static;
-  type ResponseBody = typeof typeboxResponseBody.static;
 
   let response: Response;
   let keyRequestBody: KeyRequestResponseBody;
-  let body: ResponseBody;
 
   beforeEach(async () => {
     const keyRequestResponse = await app.handle(
@@ -408,12 +528,12 @@ describe("Attempt to claim approved API key request", () => {
   });
 
   it("returns a string", async () => {
-    body = await response.json();
+    const body = (await response.json()) as { key: string };
     expect(body.key).toBeString();
   });
 
   it("returns an existing API key", async () => {
-    body = await response.json();
+    const body = (await response.json()) as { key: string };
 
     const result = db
       .select({ count: count() })
@@ -422,5 +542,95 @@ describe("Attempt to claim approved API key request", () => {
       .get();
 
     expect(result?.count).toBe(1);
+  });
+});
+
+describe("Attempt to claim denied API key request", () => {
+  const typeboxKeyRequestResponseBody = t.Object({ receipt: t.String() });
+
+  type KeyRequestResponseBody = typeof typeboxKeyRequestResponseBody.static;
+
+  let response: Response;
+  let keyRequestBody: KeyRequestResponseBody;
+
+  beforeEach(async () => {
+    const keyRequestResponse = await app.handle(
+      new Request(`${BASE_URL}/key-requests`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requesterName: "tober",
+          requestDescription: "I need this API key for testing purposes",
+          password: "abc123",
+        }),
+      }),
+    );
+
+    keyRequestBody = await keyRequestResponse.json();
+
+    const keyRequest = db
+      .select()
+      .from(key_requests)
+      .where(eq(key_requests.receipt, keyRequestBody.receipt))
+      .get();
+
+    await app.handle(
+      new Request(`${BASE_URL}/key-requests/${keyRequest!.id}`, {
+        method: "PATCH",
+        headers: {
+          Authorization: "Basic YWRtaW46YWRtaW4xMjM=",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          approved: false,
+        }),
+      }),
+    );
+
+    response = await app.handle(
+      new Request(`${BASE_URL}/key-claims`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          receipt: keyRequestBody.receipt,
+          password: "abc123",
+        }),
+      }),
+    );
+  });
+
+  it("returns a 200 OK response", () => {
+    expect(response.status).toBe(200);
+  });
+
+  it("returns a message stating that key request has been denied", async () => {
+    const body = await response.text();
+    expect(body).toBe("Your API key request has been denied");
+  });
+});
+
+describe("Attempt to claim nonexistent API key request", () => {
+  let response: Response;
+
+  beforeEach(async () => {
+    response = await app.handle(
+      new Request(`${BASE_URL}/key-claims`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          receipt: "nonexistent-receipt",
+          password: "abc123",
+        }),
+      }),
+    );
+  });
+
+  it("returns a 404 Not Found response", () => {
+    expect(response.status).toBe(404);
+  });
+
+  it("returns message stating that the key request doesn't exist", async () => {
+    const body = await response.text();
+    expect(body).toBe("The requested API key request doesn't exist");
   });
 });

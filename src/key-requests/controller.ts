@@ -1,5 +1,5 @@
 import { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
-import { eq } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import Elysia, { t } from "elysia";
 import { key_requests, api_keys } from "../database/schema";
 import {
@@ -55,7 +55,13 @@ export function keyRequestController(db: BunSQLiteDatabase) {
               return new Response(null, { status: 401 });
             }
 
-            const { username, password } = getCredsFromHeader(authorization);
+            const { errorResponse, credentials } =
+              getCredsFromHeader(authorization);
+            if (errorResponse !== null) {
+              return errorResponse;
+            }
+
+            const { username, password } = credentials!;
 
             const adminValidationResult = await validateAdminUser(
               db,
@@ -103,7 +109,13 @@ export function keyRequestController(db: BunSQLiteDatabase) {
               return new Response(null, { status: 401 });
             }
 
-            const { username, password } = getCredsFromHeader(authorization);
+            const { errorResponse, credentials } =
+              getCredsFromHeader(authorization);
+            if (errorResponse !== null) {
+              return errorResponse;
+            }
+
+            const { username, password } = credentials!;
 
             const adminValidationResult = await validateAdminUser(
               db,
@@ -115,29 +127,34 @@ export function keyRequestController(db: BunSQLiteDatabase) {
               return adminValidationResult;
             }
 
+            const matchingKeyRequestCount = db
+              .select({ count: count() })
+              .from(key_requests)
+              .where(eq(key_requests.id, id))
+              .get();
+
+            if (matchingKeyRequestCount!.count === 0) {
+              return new Response(`Key request with ID ${id} doesn't exist`, {
+                status: 404,
+              });
+            } else if (matchingKeyRequestCount!.count > 1) {
+              return new Response(null, { status: 500 });
+            }
+
             if (body.approved) {
               const keyString = generateSecureRandomString(64);
 
               await db.transaction(async (tx) => {
-                const affectedRows = await db
+                await tx
                   .update(key_requests)
                   .set({ status: "approved" })
-                  .where(eq(key_requests.id, parseInt(id)))
+                  .where(eq(key_requests.id, id))
                   .returning();
-
-                if (affectedRows.length === 0) {
-                  return new Response(
-                    `Key request with ID ${id} doesn't exist`,
-                    {
-                      status: 404,
-                    },
-                  );
-                }
 
                 await tx.insert(api_keys).values({
                   username: body.username,
                   keyString,
-                  requestId: parseInt(id),
+                  requestId: id,
                 });
               });
 
@@ -145,17 +162,11 @@ export function keyRequestController(db: BunSQLiteDatabase) {
                 `API key request with ID ${id} has been approved`,
               );
             } else {
-              const affectedRows = await db
+              await db
                 .update(key_requests)
                 .set({ status: "denied" })
-                .where(eq(key_requests.id, parseInt(id)))
+                .where(eq(key_requests.id, id))
                 .returning();
-
-              if (affectedRows.length === 0) {
-                return new Response(`Key request with ID ${id} doesn't exist`, {
-                  status: 404,
-                });
-              }
 
               return new Response(
                 `API key request with ID ${id} has been denied`,
@@ -167,6 +178,7 @@ export function keyRequestController(db: BunSQLiteDatabase) {
               username: t.Optional(t.String()),
               approved: t.Boolean(),
             }),
+            params: t.Object({ id: t.Integer() }),
           },
         ),
     )
@@ -182,7 +194,9 @@ export function keyRequestController(db: BunSQLiteDatabase) {
           if (result.length > 1) {
             return new Response(null, { status: 500 });
           } else if (result.length == 0) {
-            return new Response("Key request not found", { status: 404 });
+            return new Response("The requested API key request doesn't exist", {
+              status: 404,
+            });
           }
 
           const targetKeyRequest = result[0];
@@ -204,7 +218,9 @@ export function keyRequestController(db: BunSQLiteDatabase) {
           if (apiRequestResult.length > 1) {
             return new Response(null, { status: 500 });
           } else if (apiRequestResult.length == 0) {
-            return new Response(null, { status: 404 });
+            return new Response("Your API key request has been denied", {
+              status: 200,
+            });
           }
 
           return { key: apiRequestResult[0].keyString };
@@ -212,7 +228,7 @@ export function keyRequestController(db: BunSQLiteDatabase) {
         {
           body: t.Object({ receipt: t.String(), password: t.String() }),
           response: {
-            200: t.Object({ key: t.String() }),
+            200: t.Union([t.Object({ key: t.String() }), t.String()]),
             401: t.Any(),
             404: t.Any(),
             500: t.Any(),
