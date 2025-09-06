@@ -1,6 +1,6 @@
 import { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { eq } from "drizzle-orm";
-import { admin_users } from "../database/schema";
+import { admin_users } from "./models";
 
 export function generateSecureRandomString(length: number) {
   const alphabet = "abcdefghijkmnpqrstuvwxyz23456789";

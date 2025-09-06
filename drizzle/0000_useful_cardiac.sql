@@ -2,7 +2,7 @@ CREATE TABLE `admin_users` (
 	`username` text PRIMARY KEY NOT NULL,
 	`hashed_password` text NOT NULL,
 	`updated_at` integer,
-	`created_at` integer DEFAULT '"2025-09-06T04:04:27.960Z"' NOT NULL,
+	`created_at` integer DEFAULT '"2025-09-06T08:36:12.636Z"' NOT NULL,
 	`deleted_at` integer
 );
 --> statement-breakpoint
@@ -11,7 +11,7 @@ CREATE TABLE `api_keys` (
 	`key_string` text NOT NULL,
 	`request_id` integer NOT NULL,
 	`updated_at` integer,
-	`created_at` integer DEFAULT '"2025-09-06T04:04:27.960Z"' NOT NULL,
+	`created_at` integer DEFAULT '"2025-09-06T08:36:12.636Z"' NOT NULL,
 	`deleted_at` integer,
 	FOREIGN KEY (`request_id`) REFERENCES `key_requests`(`id`) ON UPDATE no action ON DELETE no action
 );
@@ -19,7 +19,7 @@ CREATE TABLE `api_keys` (
 CREATE UNIQUE INDEX `api_keys_key_string_unique` ON `api_keys` (`key_string`);--> statement-breakpoint
 CREATE TABLE `key_usage_logs` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`timestamp` integer DEFAULT '"2025-09-06T04:04:27.962Z"' NOT NULL,
+	`timestamp` integer DEFAULT '"2025-09-06T08:36:12.637Z"' NOT NULL,
 	`api_user_id` text,
 	`admin_user_id` text,
 	`endpoint` text NOT NULL,
@@ -37,6 +37,6 @@ CREATE TABLE `key_requests` (
 	`hashed_password` text NOT NULL,
 	`status` text DEFAULT 'pending' NOT NULL,
 	`updated_at` integer,
-	`created_at` integer DEFAULT '"2025-09-06T04:04:27.960Z"' NOT NULL,
+	`created_at` integer DEFAULT '"2025-09-06T08:36:12.636Z"' NOT NULL,
 	`deleted_at` integer
 );

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "5be8b950-192c-48dd-9144-f156f96eceb5",
+  "id": "87d48940-c80e-42a4-a471-d1b206668e3d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "admin_users": {
@@ -34,7 +34,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'\"2025-09-06T04:04:27.960Z\"'"
+          "default": "'\"2025-09-06T08:36:12.636Z\"'"
         },
         "deleted_at": {
           "name": "deleted_at",
@@ -87,7 +87,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'\"2025-09-06T04:04:27.960Z\"'"
+          "default": "'\"2025-09-06T08:36:12.636Z\"'"
         },
         "deleted_at": {
           "name": "deleted_at",
@@ -141,7 +141,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'\"2025-09-06T04:04:27.962Z\"'"
+          "default": "'\"2025-09-06T08:36:12.637Z\"'"
         },
         "api_user_id": {
           "name": "api_user_id",
@@ -269,7 +269,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'\"2025-09-06T04:04:27.960Z\"'"
+          "default": "'\"2025-09-06T08:36:12.636Z\"'"
         },
         "deleted_at": {
           "name": "deleted_at",

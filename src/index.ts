@@ -1,8 +1,8 @@
 import { Elysia } from "elysia";
 import { apiKeyController } from "./api-keys/controller";
-import { db } from "./database";
+import { db } from "./db";
 import { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
-import { errorHandler } from "./handlers/error";
+import { errorHandler } from "./plugins/error";
 import { openapi } from "@elysiajs/openapi";
 
 export const apiMetadata = {

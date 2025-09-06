@@ -1,7 +1,7 @@
 import { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { count, eq } from "drizzle-orm";
 import Elysia, { t } from "elysia";
-import { key_requests, api_keys } from "../database/schema";
+import { key_requests, api_keys } from "./models";
 import {
   getCredsFromHeader,
   validateAdminUser,

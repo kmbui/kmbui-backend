@@ -11,7 +11,7 @@ import {
   key_requests,
   admin_users,
   KeyRequest,
-} from "../src/database/schema";
+} from "../src/api-keys/models";
 
 const BASE_URL: string = "http://localhost:3000";
 
