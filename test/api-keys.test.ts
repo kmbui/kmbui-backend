@@ -1,11 +1,19 @@
 import { t } from "elysia";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { apiMetadata, createApp } from "../src";
-import Database from "bun:sqlite";
-import { drizzle } from "drizzle-orm/bun-sqlite";
+import {
+  afterAll,
+  beforeAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+} from "bun:test";
+import { apiMetadata, createApp } from "../src/main-app/controller";
+import { drizzle } from "drizzle-orm/libsql";
+import { createClient } from "@libsql/client/sqlite3";
 import { eq, count } from "drizzle-orm";
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { migrate } from "drizzle-orm/libsql/migrator";
 import {
   api_keys,
   key_requests,
@@ -13,24 +21,28 @@ import {
   KeyRequest,
 } from "../src/api-keys/models";
 
-const BASE_URL: string = "http://localhost:3000";
+const TEST_PORT: number = 3000;
+const BASE_URL: string = `http://localhost:${TEST_PORT}`;
 
-const db = drizzle(new Database(":memory:"));
-migrate(db, {
-  migrationsFolder: "./drizzle",
+const libsqlClient = createClient({ url: "file:local.db" });
+const db = drizzle(libsqlClient);
+const app = createApp(db).listen(TEST_PORT);
+
+beforeAll(async () => {
+  await migrate(db, { migrationsFolder: "./drizzle" });
+  const passwordHash = await Bun.password.hash("admin123");
+  await db
+    .insert(admin_users)
+    .values({ username: "admin", hashedPassword: passwordHash });
 });
-
-const passwordHash = await Bun.password.hash("admin123");
-
-await db
-  .insert(admin_users)
-  .values({ username: "admin", hashedPassword: passwordHash });
-
-const app = createApp(db).listen(3000);
 
 afterEach(async () => {
   await db.delete(api_keys);
   await db.delete(key_requests);
+});
+
+afterAll(async () => {
+  await db.delete(admin_users);
 });
 
 describe("Call home route", () => {
@@ -82,7 +94,7 @@ describe("Create a valid API key request", () => {
   });
 
   it("creates an entry in the database", async () => {
-    const entry = db
+    const entry = await db
       .select()
       .from(key_requests)
       .where(eq(key_requests.receipt, body.receipt))
@@ -249,7 +261,7 @@ describe("Approve a valid API key request as admin", async () => {
       }),
     );
 
-    keyRequest = db.select().from(key_requests).get()!;
+    keyRequest = (await db.select().from(key_requests))[0];
 
     response = await app.handle(
       new Request(`${BASE_URL}/key-requests/${keyRequest!.id}`, {
@@ -271,7 +283,7 @@ describe("Approve a valid API key request as admin", async () => {
   });
 
   it("creates an API key corresponding to the approved request's ID", async () => {
-    const targetAPIKey = db
+    const targetAPIKey = await db
       .select()
       .from(api_keys)
       .where(eq(api_keys.requestId, keyRequest!.id))
@@ -280,8 +292,8 @@ describe("Approve a valid API key request as admin", async () => {
     expect(targetAPIKey).not.toBeUndefined();
   });
 
-  it("sets the key request's status to 'approved'", () => {
-    const targetKeyRequest = db
+  it("sets the key request's status to 'approved'", async () => {
+    const targetKeyRequest = await db
       .select()
       .from(key_requests)
       .where(eq(key_requests.id, keyRequest!.id))
@@ -310,7 +322,7 @@ describe("Deny a valid API key request as admin", async () => {
       }),
     );
 
-    keyRequest = db.select().from(key_requests).get()!;
+    keyRequest = (await db.select().from(key_requests))[0];
 
     response = await app.handle(
       new Request(`${BASE_URL}/key-requests/${keyRequest!.id}`, {
@@ -331,7 +343,7 @@ describe("Deny a valid API key request as admin", async () => {
   });
 
   it("doesn't create an API key corresponding to the key request ID", async () => {
-    const targetAPIKey = db
+    const targetAPIKey = await db
       .select()
       .from(api_keys)
       .where(eq(api_keys.requestId, keyRequest!.id))
@@ -340,8 +352,8 @@ describe("Deny a valid API key request as admin", async () => {
     expect(targetAPIKey).toBeUndefined();
   });
 
-  it("sets the key request's status to 'denied'", () => {
-    const targetKeyRequest = db
+  it("sets the key request's status to 'denied'", async () => {
+    const targetKeyRequest = await db
       .select()
       .from(key_requests)
       .where(eq(key_requests.id, keyRequest!.id))
@@ -427,7 +439,7 @@ describe("Attempt to process a valid API key request wihout admin credentials", 
       }),
     );
 
-    keyRequest = db.select().from(key_requests).get()!;
+    keyRequest = (await db.select().from(key_requests))[0];
 
     response = await app.handle(
       new Request(`${BASE_URL}/key-requests/${keyRequest!.id}`, {
@@ -448,7 +460,7 @@ describe("Attempt to process a valid API key request wihout admin credentials", 
   });
 
   it("doesn't create an API key corresponding to the key request ID", async () => {
-    const targetAPIKey = db
+    const targetAPIKey = await db
       .select()
       .from(api_keys)
       .where(eq(api_keys.requestId, keyRequest!.id))
@@ -457,8 +469,8 @@ describe("Attempt to process a valid API key request wihout admin credentials", 
     expect(targetAPIKey).toBeUndefined();
   });
 
-  it("maintains the key request's status of 'pending'", () => {
-    const targetKeyRequest = db
+  it("maintains the key request's status of 'pending'", async () => {
+    const targetKeyRequest = await db
       .select()
       .from(key_requests)
       .where(eq(key_requests.id, keyRequest!.id))
@@ -491,7 +503,7 @@ describe("Attempt to claim approved API key request", () => {
 
     keyRequestBody = await keyRequestResponse.json();
 
-    const keyRequest = db
+    const keyRequest = await db
       .select()
       .from(key_requests)
       .where(eq(key_requests.receipt, keyRequestBody.receipt))
@@ -535,7 +547,7 @@ describe("Attempt to claim approved API key request", () => {
   it("returns an existing API key", async () => {
     const body = (await response.json()) as { key: string };
 
-    const result = db
+    const result = await db
       .select({ count: count() })
       .from(api_keys)
       .where(eq(api_keys.keyString, body.key))
@@ -568,7 +580,7 @@ describe("Attempt to claim denied API key request", () => {
 
     keyRequestBody = await keyRequestResponse.json();
 
-    const keyRequest = db
+    const keyRequest = await db
       .select()
       .from(key_requests)
       .where(eq(key_requests.receipt, keyRequestBody.receipt))

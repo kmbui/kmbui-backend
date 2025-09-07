@@ -1,2 +1,10 @@
 [test]
-coveragePathIgnorePatterns = "**/schema.ts"
+# Always enable code coverage report
+coverage = true
+
+# Ignore code coverage on models
+coveragePathIgnorePatterns = "**/models.ts"
+
+# Generate coveraage report in LCOV format
+coverageReporter = "lcov"
+coverageDir = "./coverage"

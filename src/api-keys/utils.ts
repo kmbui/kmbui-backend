@@ -1,6 +1,6 @@
-import { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
 import { eq } from "drizzle-orm";
 import { admin_users } from "./models";
+import { LibSQLDatabase } from "drizzle-orm/libsql";
 
 export function generateSecureRandomString(length: number) {
   const alphabet = "abcdefghijkmnpqrstuvwxyz23456789";
@@ -33,7 +33,7 @@ export function getCredsFromHeader(authHeader: string): {
 }
 
 export async function validateAdminUser(
-  db: BunSQLiteDatabase,
+  db: LibSQLDatabase,
   username: string,
   password: string,
 ) {

@@ -1,4 +1,4 @@
-import { BunSQLiteDatabase } from "drizzle-orm/bun-sqlite";
+import { LibSQLDatabase } from "drizzle-orm/libsql";
 import { count, eq } from "drizzle-orm";
 import Elysia, { t } from "elysia";
 import { key_requests, api_keys } from "./models";
@@ -8,7 +8,7 @@ import {
   generateSecureRandomString,
 } from "./utils";
 
-export function apiKeyController(db: BunSQLiteDatabase) {
+export function apiKeyController(db: LibSQLDatabase) {
   return new Elysia()
     .state("db", db)
     .group("/key-requests", { detail: { tags: ["API keys"] } }, (app) =>
@@ -23,7 +23,7 @@ export function apiKeyController(db: BunSQLiteDatabase) {
             const receipt = crypto.randomUUID();
             const hashedPassword = await Bun.password.hash(password);
 
-            const response = db
+            const response = await db
               .insert(key_requests)
               .values({
                 requesterName,
@@ -127,7 +127,7 @@ export function apiKeyController(db: BunSQLiteDatabase) {
               return adminValidationResult;
             }
 
-            const matchingKeyRequestCount = db
+            const matchingKeyRequestCount = await db
               .select({ count: count() })
               .from(key_requests)
               .where(eq(key_requests.id, id))
