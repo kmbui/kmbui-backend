@@ -12,7 +12,8 @@
     "drizzle-kit": "^0.31.4",
     "drizzle-orm": "^0.44.5",
     "drizzle-typebox": "^0.3.3",
-    "elysia": "latest"
+    "elysia": "latest",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "bun-types": "latest",
