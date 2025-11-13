@@ -2,6 +2,32 @@
 
 Built with Elysia on Bun
 
+## Explanation
+
+The KMBUI backend server acts as the main data hub for KMBUI services. As of
+right now, it is solely a REST API that serves information for the main KMBUI
+website.
+
+## Available resources
+
+The following resources are currently available to query from the REST API:
+
+1. API keys for authentication and authorization
+
+The following resources are currently a work in progress:
+
+1. Paramita's articles
+2. Paramita's magazines
+
+## Usage
+
+In order to use the entirety of the API, a user must make a request for an API
+key through the `/key-requests` endpoint. The server administrator holds the
+responsibility of granting users API keys after a manual verification process.
+
+After procuring an API key, the user needs to send the API key through the
+authorization header along with every request for resources.
+
 ## Development
 
 ### Local testing
@@ -25,4 +51,5 @@ bun run test
 ```
 
 > The generated code coverage files can be found in the `./coverage` folder.
-> Open `./coverage/html/index.html` in a browser to view the code coverage report.
+> Open `./coverage/html/index.html` in a browser to view the code coverage
+> report.

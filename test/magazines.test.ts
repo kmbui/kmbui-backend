@@ -1,44 +1,10 @@
 import { t } from "elysia";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import {
-  afterAll,
-  beforeAll,
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from "bun:test";
-import { createApp } from "../src/main-app/controller";
-import { drizzle } from "drizzle-orm/libsql";
-import { createClient } from "@libsql/client/sqlite3";
-import { migrate } from "drizzle-orm/libsql/migrator";
-import { api_keys, key_requests, admin_users } from "../src/api-keys/models";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { magazines } from "../src/magazines/models";
+import { BASE_URL, setupApp } from "./common";
 
-const TEST_PORT: number = 3000;
-const BASE_URL: string = `http://localhost:${TEST_PORT}`;
-
-const libsqlClient = createClient({ url: "file:local.db" });
-const db = drizzle(libsqlClient);
-const app = createApp(db).listen(TEST_PORT);
-
-beforeAll(async () => {
-  await migrate(db, { migrationsFolder: "./drizzle" });
-  const passwordHash = await Bun.password.hash("admin123");
-  await db
-    .insert(admin_users)
-    .values({ username: "admin", hashedPassword: passwordHash });
-});
-
-afterEach(async () => {
-  await db.delete(api_keys);
-  await db.delete(key_requests);
-});
-
-afterAll(async () => {
-  await db.delete(admin_users);
-});
+const [db, app] = setupApp();
 
 // Allow nulls for timestamps that are nullable in the DB model.
 const typeboxMagazineMetadata = t.Object({
@@ -70,7 +36,7 @@ describe("Create a valid magazine", () => {
             thumbnailUrl: "https://test.thumbnail1.url",
             contentUrl: "https://test.content1.url",
           } as MagazineMetadata),
-        })
+        }),
       )
       .then((res) => res.json());
   });
@@ -114,7 +80,7 @@ describe("Fetch data on one magazine", () => {
             thumbnailUrl: "https://test.thumbnail2.url",
             contentUrl: "https://test.content2.url",
           }),
-        })
+        }),
       )
       .then((res) => res.json());
 
@@ -146,7 +112,7 @@ describe("Fetch data on one magazine", () => {
 
   it("returns the magazine's content as a file", async () => {
     const res = await app.handle(
-      new Request(`${BASE_URL}/magazines/${created.id}/content`)
+      new Request(`${BASE_URL}/magazines/${created.id}/content`),
     );
     // Accept either a direct file (2xx) or a redirect (3xx) to the file
     expect(res.status).toBeGreaterThanOrEqual(200);
