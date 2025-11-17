@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { admin_users } from "./models";
 import { LibSQLDatabase } from "drizzle-orm/libsql";
+import { ElysiaCustomStatusResponse, status } from "elysia";
 
 export function generateSecureRandomString(length: number) {
   const alphabet = "abcdefghijkmnpqrstuvwxyz23456789";
@@ -16,7 +17,7 @@ export function generateSecureRandomString(length: number) {
 }
 
 export function getCredsFromHeader(authHeader: string): {
-  errorResponse: Response | null;
+  errorResponse: number | null;
   credentials: { username: string; password: string } | null;
 } {
   let errorResponse = null;
@@ -26,7 +27,7 @@ export function getCredsFromHeader(authHeader: string): {
     const [username, password] = atob(authToken).split(":");
     credentials = { username, password };
   } catch {
-    errorResponse = new Response(null, { status: 401 });
+    errorResponse = 401;
   }
 
   return { errorResponse, credentials };
@@ -43,9 +44,9 @@ export async function validateAdminUser(
     .where(eq(admin_users.username, username));
 
   if (result.length === 0) {
-    return new Response(null, { status: 401 });
+    return 401;
   } else if (result.length > 1) {
-    return new Response(null, { status: 500 });
+    return 500;
   }
 
   const isValidAdmin = await Bun.password.verify(
@@ -54,7 +55,7 @@ export async function validateAdminUser(
   );
 
   if (!isValidAdmin) {
-    return new Response(null, { status: 401 });
+    return 401;
   }
 
   return null;
