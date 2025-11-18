@@ -14,5 +14,10 @@ export const magazines = sqliteTable("magazines", {
   description: text().notNull(),
   thumbnailUrl: text("thumbnail_url").notNull(),
   contentUrl: text("content_url").notNull(),
+  status: text({ enum: ["draft", "published", "archived"] })
+    .default("draft")
+    .notNull(),
   ...timestamps,
 });
+
+export type Magazine = typeof magazines.$inferSelect;
