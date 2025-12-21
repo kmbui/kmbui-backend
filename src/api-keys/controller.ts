@@ -1,6 +1,6 @@
 import { LibSQLDatabase } from "drizzle-orm/libsql";
-import { count, eq } from "drizzle-orm";
-import Elysia, { t } from "elysia";
+import { count, DrizzleQueryError, eq } from "drizzle-orm";
+import Elysia, { status, t } from "elysia";
 import { key_requests, api_keys } from "./models";
 import {
   getCredsFromHeader,
@@ -18,7 +18,6 @@ export function apiKeyController(db: LibSQLDatabase) {
           async ({
             body: { requesterName, requestDescription, password },
             store: { db },
-            set,
           }) => {
             const receipt = crypto.randomUUID();
             const hashedPassword = await Bun.password.hash(password);
@@ -34,8 +33,7 @@ export function apiKeyController(db: LibSQLDatabase) {
               .returning()
               .get();
 
-            set.status = 201;
-            return { receipt: response.receipt };
+            return status(201, { receipt: response.receipt });
           },
           {
             body: t.Object({
@@ -43,22 +41,21 @@ export function apiKeyController(db: LibSQLDatabase) {
               requestDescription: t.String(),
               password: t.String(),
             }),
-            response: t.Object({
-              receipt: t.String(),
-            }),
+            response: {
+              201: t.Object({
+                receipt: t.String(),
+              }),
+            },
           },
         )
         .get(
           "/",
           async ({ headers: { authorization }, store: { db } }) => {
-            if (!authorization) {
-              return new Response(null, { status: 401 });
-            }
-
             const { errorResponse, credentials } =
               getCredsFromHeader(authorization);
+
             if (errorResponse !== null) {
-              return errorResponse;
+              return status(errorResponse.status, errorResponse.message);
             }
 
             const { username, password } = credentials!;
@@ -70,7 +67,10 @@ export function apiKeyController(db: LibSQLDatabase) {
             );
 
             if (adminValidationResult !== null) {
-              return adminValidationResult;
+              return status(
+                adminValidationResult.status,
+                adminValidationResult.message,
+              );
             }
 
             const keyRequests = await db
@@ -87,6 +87,9 @@ export function apiKeyController(db: LibSQLDatabase) {
             return keyRequests;
           },
           {
+            headers: t.Object({
+              authorization: t.String(),
+            }),
             response: {
               200: t.Array(
                 t.Object({
@@ -104,15 +107,15 @@ export function apiKeyController(db: LibSQLDatabase) {
         )
         .patch(
           "/:id",
-          async ({ params: { id }, headers: { authorization }, body }) => {
+          async ({ params: { id }, headers: { authorization }, body, set }) => {
             if (!authorization) {
-              return new Response(null, { status: 401 });
+              return status(401, null);
             }
 
             const { errorResponse, credentials } =
               getCredsFromHeader(authorization);
             if (errorResponse !== null) {
-              return errorResponse;
+              return status(errorResponse.status, errorResponse.message);
             }
 
             const { username, password } = credentials!;
@@ -124,61 +127,87 @@ export function apiKeyController(db: LibSQLDatabase) {
             );
 
             if (adminValidationResult !== null) {
-              return adminValidationResult;
+              return status(
+                adminValidationResult.status,
+                adminValidationResult.message,
+              );
             }
 
-            const matchingKeyRequestCount = await db
-              .select({ count: count() })
-              .from(key_requests)
-              .where(eq(key_requests.id, id))
-              .get();
+            const matchingKeyRequestCount = await db.$count(
+              key_requests,
+              eq(key_requests.id, id),
+            );
 
-            if (matchingKeyRequestCount!.count === 0) {
-              return new Response(`Key request with ID ${id} doesn't exist`, {
-                status: 404,
-              });
-            } else if (matchingKeyRequestCount!.count > 1) {
-              return new Response(null, { status: 500 });
+            if (matchingKeyRequestCount === 0) {
+              return status(404, `Key request with ID ${id} doesn't exist`);
             }
 
-            if (body.approved) {
+            const matchingApiKeyCount = await db.$count(
+              api_keys,
+              eq(api_keys.requestId, id),
+            );
+
+            if (matchingApiKeyCount > 0) {
+              return status(409, "A key with the provided ID already exists");
+            }
+
+            if (body.approved == true) {
               const keyString = generateSecureRandomString(64);
 
-              await db.transaction(async (tx) => {
-                await tx
+              try {
+                await db.transaction(async (tx) => {
+                  await tx
+                    .update(key_requests)
+                    .set({ status: "approved" })
+                    .where(eq(key_requests.id, id))
+                    .returning();
+
+                  await tx.insert(api_keys).values({
+                    username: body.assignedUsername,
+                    keyString,
+                    requestId: id,
+                  });
+                });
+              } catch (error) {
+                if (error instanceof DrizzleQueryError) {
+                  return status(500, error.message);
+                } else {
+                  return status(500, "An unknown error occurred");
+                }
+              }
+
+              return `API key with ID ${id} has been approved`;
+            } else {
+              try {
+                await db
                   .update(key_requests)
-                  .set({ status: "approved" })
+                  .set({ status: "denied" })
                   .where(eq(key_requests.id, id))
                   .returning();
+              } catch (error) {
+                if (error instanceof DrizzleQueryError) {
+                  return status(500, error.message);
+                } else {
+                  return status(500, "An unknown error occurred");
+                }
+              }
 
-                await tx.insert(api_keys).values({
-                  username: body.username,
-                  keyString,
-                  requestId: id,
-                });
-              });
-
-              return new Response(
-                `API key request with ID ${id} has been approved`,
-              );
-            } else {
-              await db
-                .update(key_requests)
-                .set({ status: "denied" })
-                .where(eq(key_requests.id, id))
-                .returning();
-
-              return new Response(
-                `API key request with ID ${id} has been denied`,
-              );
+              return `API key request with ID ${id} has been denied`;
             }
           },
           {
             body: t.Object({
-              username: t.Optional(t.String()),
+              assignedUsername: t.Optional(t.String()),
               approved: t.Boolean(),
             }),
             params: t.Object({ id: t.Integer() }),
+            response: {
+              204: t.String(),
+              401: t.Null(),
+              404: t.Null(),
+              409: t.String(),
+              500: t.Union([t.Null(), t.String()]),
+            },
           },
         ),
     )
@@ -186,44 +215,59 @@ export function apiKeyController(db: LibSQLDatabase) {
       app.post(
         "/",
         async ({ body: { receipt, password } }) => {
+          // Fetch all key requests corresponding to the receipt
           const result = await db
             .select()
             .from(key_requests)
             .where(eq(key_requests.receipt, receipt));
 
+          // If there are duplicate key requests, throw an internal server error
           if (result.length > 1) {
-            return new Response(null, { status: 500 });
+            return status(
+              500,
+              "More than one key request corresponds to the provided receipt. Please contact the administrator",
+            );
           } else if (result.length == 0) {
-            return new Response("The requested API key request doesn't exist", {
-              status: 404,
-            });
+            return status(404, null);
           }
 
+          // If there is only one key request, keep it
           const targetKeyRequest = result[0];
 
+          // If the key request has been denied, inform the user
+          if (targetKeyRequest.status == "denied") {
+            return status(200, "Your API key request has been denied");
+          }
+
+          // Verify that the user provided password is equal to the one provided during request creation
           const isAuthenticated = await Bun.password.verify(
             password,
             targetKeyRequest.hashedPassword,
           );
 
           if (!isAuthenticated) {
-            return new Response(null, { status: 401 });
+            return status(401, null);
           }
 
-          const apiRequestResult = await db
+          // Fetch API key corresponding to the proper key request
+          const apiKeyRequestResult = await db
             .select()
             .from(api_keys)
             .where(eq(api_keys.requestId, targetKeyRequest.id));
 
-          if (apiRequestResult.length > 1) {
-            return new Response(null, { status: 500 });
-          } else if (apiRequestResult.length == 0) {
-            return new Response("Your API key request has been denied", {
-              status: 200,
-            });
+          if (apiKeyRequestResult.length > 1) {
+            return status(
+              500,
+              "More than one API key corresponds to the provided request ID. Please contact the administrator",
+            );
+          } else if (apiKeyRequestResult.length == 0) {
+            return status(
+              404,
+              "No API key with the provided request ID was found",
+            );
           }
 
-          return { key: apiRequestResult[0].keyString };
+          return { key: apiKeyRequestResult[0].keyString };
         },
         {
           body: t.Object({ receipt: t.String(), password: t.String() }),

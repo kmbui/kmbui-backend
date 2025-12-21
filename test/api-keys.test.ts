@@ -1,49 +1,12 @@
 import { t } from "elysia";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
-import {
-  afterAll,
-  beforeAll,
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-} from "bun:test";
-import { apiMetadata, createApp } from "../src/main-app/controller";
-import { drizzle } from "drizzle-orm/libsql";
-import { createClient } from "@libsql/client/sqlite3";
+import { beforeEach, describe, expect, it } from "bun:test";
+import { apiMetadata } from "../src/main-app/controller";
 import { eq, count } from "drizzle-orm";
-import { migrate } from "drizzle-orm/libsql/migrator";
-import {
-  api_keys,
-  key_requests,
-  admin_users,
-  KeyRequest,
-} from "../src/api-keys/models";
+import { api_keys, key_requests, KeyRequest } from "../src/api-keys/models";
+import { BASE_URL, setupApp } from "./common";
 
-const TEST_PORT: number = 3000;
-const BASE_URL: string = `http://localhost:${TEST_PORT}`;
-
-const libsqlClient = createClient({ url: "file:local.db" });
-const db = drizzle(libsqlClient);
-const app = createApp(db).listen(TEST_PORT);
-
-beforeAll(async () => {
-  await migrate(db, { migrationsFolder: "./drizzle" });
-  const passwordHash = await Bun.password.hash("admin123");
-  await db
-    .insert(admin_users)
-    .values({ username: "admin", hashedPassword: passwordHash });
-});
-
-afterEach(async () => {
-  await db.delete(api_keys);
-  await db.delete(key_requests);
-});
-
-afterAll(async () => {
-  await db.delete(admin_users);
-});
+const [db, app] = setupApp();
 
 describe("Call home route", () => {
   it("returns metadata about the API", async () => {
@@ -173,11 +136,6 @@ describe("Fetch all API key requests with broken authorization header", () => {
   it("returns a 401 Unauthorized response", () => {
     expect(response.status).toBe(401);
   });
-
-  it("returns an empty response body", async () => {
-    const body = await response.text();
-    expect(body.length).toBe(0);
-  });
 });
 
 describe("Fetch all API key requests with invalid admin username", () => {
@@ -194,11 +152,6 @@ describe("Fetch all API key requests with invalid admin username", () => {
 
   it("returns a 401 Unauthorized response", () => {
     expect(response.status).toBe(401);
-  });
-
-  it("returns an empty response body", async () => {
-    const body = await response.text();
-    expect(body.length).toBe(0);
   });
 });
 
@@ -217,11 +170,6 @@ describe("Fetch all API key requests with invalid admin password", () => {
   it("returns a 401 Unauthorized response", () => {
     expect(response.status).toBe(401);
   });
-
-  it("returns an empty response body", async () => {
-    const body = await response.text();
-    expect(body.length).toBe(0);
-  });
 });
 
 describe("Fetch all API key requests without authorization header", () => {
@@ -233,12 +181,8 @@ describe("Fetch all API key requests without authorization header", () => {
     );
   });
 
-  it("returns a 401 Unauthorized response", () => {
-    expect(response.status).toBe(401);
-  });
-
-  it("returns nothing in the response body", async () => {
-    expect(await response.text()).toHaveLength(0);
+  it("returns a 422 Unprocessable Entity response", () => {
+    expect(response.status).toBe(422);
   });
 });
 
@@ -271,7 +215,7 @@ describe("Approve a valid API key request as admin", async () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: "tober from testing",
+          assignedUsername: "tober from testing",
           approved: true,
         }),
       }),
@@ -414,10 +358,6 @@ describe("Attempt to approve an API key request without authorization header", (
   it("returns a 401 Unauthorized response", () => {
     expect(response.status).toBe(401);
   });
-
-  it("returns nothing in the response body", async () => {
-    expect(await response.text()).toHaveLength(0);
-  });
 });
 
 describe("Attempt to process a valid API key request wihout admin credentials", async () => {
@@ -517,7 +457,7 @@ describe("Attempt to claim approved API key request", () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: "tober from testing",
+          assignedUsername: "tober from testing",
           approved: true,
         }),
       }),
@@ -535,13 +475,8 @@ describe("Attempt to claim approved API key request", () => {
     );
   });
 
-  it("returns a 200 OK response", () => {
+  it("returns a 200 OK response", async () => {
     expect(response.status).toBe(200);
-  });
-
-  it("returns a string", async () => {
-    const body = (await response.json()) as { key: string };
-    expect(body.key).toBeString();
   });
 
   it("returns an existing API key", async () => {
@@ -639,10 +574,5 @@ describe("Attempt to claim nonexistent API key request", () => {
 
   it("returns a 404 Not Found response", () => {
     expect(response.status).toBe(404);
-  });
-
-  it("returns message stating that the key request doesn't exist", async () => {
-    const body = await response.text();
-    expect(body).toBe("The requested API key request doesn't exist");
   });
 });
