@@ -1,7 +1,11 @@
 import { eq } from "drizzle-orm";
 import { admin_users } from "./models";
 import { LibSQLDatabase } from "drizzle-orm/libsql";
-import { ElysiaCustomStatusResponse, status } from "elysia";
+
+export type ErrorResponse = {
+  status: number;
+  message: string;
+} | null;
 
 export function generateSecureRandomString(length: number) {
   const alphabet = "abcdefghijkmnpqrstuvwxyz23456789";
@@ -17,17 +21,22 @@ export function generateSecureRandomString(length: number) {
 }
 
 export function getCredsFromHeader(authHeader: string): {
-  errorResponse: number | null;
+  errorResponse: ErrorResponse;
   credentials: { username: string; password: string } | null;
 } {
-  let errorResponse = null;
+  let errorResponse: ErrorResponse = null;
   let credentials = null;
+
   try {
-    const authToken = authHeader.split(" ")[1];
-    const [username, password] = atob(authToken).split(":");
+    const encodedAuthToken = authHeader.split(" ")[1];
+    const authToken = Buffer.from(encodedAuthToken, "base64");
+    const [username, password] = authToken.toString().split(":");
     credentials = { username, password };
   } catch {
-    errorResponse = 401;
+    errorResponse = {
+      status: 400,
+      message: "The provided credentials are malformed",
+    } as ErrorResponse;
   }
 
   return { errorResponse, credentials };
@@ -37,16 +46,23 @@ export async function validateAdminUser(
   db: LibSQLDatabase,
   username: string,
   password: string,
-) {
+): Promise<ErrorResponse> {
   const result = await db
     .select()
     .from(admin_users)
     .where(eq(admin_users.username, username));
 
   if (result.length === 0) {
-    return 401;
+    return {
+      status: 401,
+      message: "Provided admin credentials are invalid",
+    } as ErrorResponse;
   } else if (result.length > 1) {
-    return 500;
+    return {
+      status: 500,
+      message:
+        "More than one admin user has the same credentials. Please contact administrator",
+    } as ErrorResponse;
   }
 
   const isValidAdmin = await Bun.password.verify(
@@ -55,7 +71,10 @@ export async function validateAdminUser(
   );
 
   if (!isValidAdmin) {
-    return 401;
+    return {
+      status: 401,
+      message: "Provided admin credentials are invalid",
+    } as ErrorResponse;
   }
 
   return null;

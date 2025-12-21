@@ -16,38 +16,44 @@ export const authPlugin = (db: LibSQLDatabase) =>
 
       const { errorResponse, credentials } = getCredsFromHeader(authHeader);
       if (errorResponse !== null) {
-        throw status(errorResponse, "Unauthorized");
+        throw status(errorResponse.status, errorResponse.message);
       }
 
       const { username, password } = credentials!;
 
-      validateAdminUser(db, username, password).then((errorCode) => {
-        switch (errorCode) {
-          case 401:
-            throw status(errorCode, "Unauthorized");
-          case 500:
-            throw status(errorCode, "Internal Server Error");
-        }
-      });
+      validateAdminUser(db, username, password).then(
+        (adminValidationResponse) => {
+          if (adminValidationResponse !== null) {
+            return status(
+              adminValidationResponse.status,
+              adminValidationResponse.message,
+            );
+          }
+        },
+      );
 
       role = "admin" as Role;
     } else if (request.headers.has("x-api-key")) {
       // This branch checks for a valid API key
       const apiKeyHeader = request.headers.get("x-api-key")!;
 
-      db.select({ id: api_keys.username })
+      db.select({ id: api_keys.username, revoked: api_keys.revoked })
         .from(api_keys)
         .where(eq(api_keys.keyString, apiKeyHeader))
         .limit(1)
         .then((result) => {
           if (result.length < 1) {
-            throw status(401, "Unauthorized");
+            throw status(401, "The provided API key is invalid");
+          }
+
+          if (result[0].revoked) {
+            throw status(401, "This API key has been revoked");
           }
         });
 
       role = "user" as Role;
     } else {
-      throw status(401, "Unauthorized");
+      throw status(401, null);
     }
 
     return {

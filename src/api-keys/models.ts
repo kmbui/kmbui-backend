@@ -25,6 +25,7 @@ export const api_keys = sqliteTable("api_keys", {
   requestId: integer("request_id")
     .references(() => key_requests.id)
     .notNull(),
+  revoked: integer({ mode: "boolean" }).default(false).notNull(),
   ...timestamps,
 });
 
