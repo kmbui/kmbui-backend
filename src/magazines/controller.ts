@@ -4,7 +4,7 @@ import { magazines, Magazine } from "./models";
 import { eq, and } from "drizzle-orm";
 import { authPlugin } from "../plugins/auth";
 
-const MagazineSchema = t.Object({
+export const MagazineSchema = t.Object({
   id: t.Number(),
   title: t.String(),
   description: t.String(),

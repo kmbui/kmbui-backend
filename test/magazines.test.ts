@@ -3,24 +3,13 @@ import { TypeCompiler } from "@sinclair/typebox/compiler";
 import { beforeEach, describe, expect, it } from "bun:test";
 import { magazines } from "../src/magazines/models";
 import { BASE_URL, setupApp } from "./common";
+import { MagazineSchema } from "../src/magazines/controller";
 
 const [db, app] = setupApp();
 
-// Allow nulls for timestamps that are nullable in the DB model.
-const typeboxMagazineMetadata = t.Object({
-  id: t.Integer(),
-  title: t.String(),
-  description: t.String(),
-  thumbnailUrl: t.String(),
-  contentUrl: t.String(),
-  updatedAt: t.Union([t.Integer(), t.Null()]),
-  createdAt: t.Integer(),
-  deletedAt: t.Union([t.Integer(), t.Null()]),
-});
+type MagazineMetadata = typeof MagazineSchema.static;
 
-type MagazineMetadata = typeof typeboxMagazineMetadata.static;
-
-const validator = TypeCompiler.Compile(typeboxMagazineMetadata);
+const validator = TypeCompiler.Compile(MagazineSchema);
 
 describe("Create a valid magazine", () => {
   let body: any;
