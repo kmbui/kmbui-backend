@@ -30,6 +30,17 @@ authorization header along with every request for resources.
 
 ## Development
 
+### Environment variables
+
+| Key                  | Value                                               |
+| -------------------- | --------------------------------------------------- |
+| DATABASE_URL         | URL to Turso database                               |
+| DATABASE_AUTH_TOKEN  | Authorization token for Turso database              |
+| S3_ENDPOINT          | URL to S3 compatible object storage                 |
+| S3_ACCESS_KEY_ID     | S3 compatible object storage's access key ID        |
+| S3_SECRET_ACCESS_KEY | S3 compatible object storage's secret access key    |
+| BUCKET_NAME          | Bucket where all KMBUI backend documents are stored |
+
 ### Local testing
 
 To start the development server run:
