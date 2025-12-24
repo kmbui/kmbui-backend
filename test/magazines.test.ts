@@ -56,11 +56,9 @@ describe("Create a valid magazine", () => {
 
 describe("Fetch all magazines", () => {
   it("returns a list of magazine metadata", async () => {
-    const response = await app
-      .handle(new Request(`${BASE_URL}/magazines`))
-      .then((res) => res.json());
+    const response = await app.handle(new Request(`${BASE_URL}/magazines`));
 
-    expect(response).toBeArray();
+    expect(await response.json()).toBeArray();
   });
 });
 

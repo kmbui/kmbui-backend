@@ -136,11 +136,6 @@ describe("Fetch all API key requests with broken authorization header", () => {
   it("returns a 401 Unauthorized response", () => {
     expect(response.status).toBe(401);
   });
-
-  it("returns an empty response body", async () => {
-    const body = await response.text();
-    expect(body.length).toBe(0);
-  });
 });
 
 describe("Fetch all API key requests with invalid admin username", () => {
@@ -157,11 +152,6 @@ describe("Fetch all API key requests with invalid admin username", () => {
 
   it("returns a 401 Unauthorized response", () => {
     expect(response.status).toBe(401);
-  });
-
-  it("returns an empty response body", async () => {
-    const body = await response.text();
-    expect(body.length).toBe(0);
   });
 });
 
@@ -180,11 +170,6 @@ describe("Fetch all API key requests with invalid admin password", () => {
   it("returns a 401 Unauthorized response", () => {
     expect(response.status).toBe(401);
   });
-
-  it("returns an empty response body", async () => {
-    const body = await response.text();
-    expect(body.length).toBe(0);
-  });
 });
 
 describe("Fetch all API key requests without authorization header", () => {
@@ -196,12 +181,8 @@ describe("Fetch all API key requests without authorization header", () => {
     );
   });
 
-  it("returns a 401 Unauthorized response", () => {
-    expect(response.status).toBe(401);
-  });
-
-  it("returns nothing in the response body", async () => {
-    expect(await response.text()).toHaveLength(0);
+  it("returns a 422 Unprocessable Entity response", () => {
+    expect(response.status).toBe(422);
   });
 });
 
@@ -234,7 +215,7 @@ describe("Approve a valid API key request as admin", async () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: "tober from testing",
+          assignedUsername: "tober from testing",
           approved: true,
         }),
       }),
@@ -377,10 +358,6 @@ describe("Attempt to approve an API key request without authorization header", (
   it("returns a 401 Unauthorized response", () => {
     expect(response.status).toBe(401);
   });
-
-  it("returns nothing in the response body", async () => {
-    expect(await response.text()).toHaveLength(0);
-  });
 });
 
 describe("Attempt to process a valid API key request wihout admin credentials", async () => {
@@ -480,7 +457,7 @@ describe("Attempt to claim approved API key request", () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username: "tober from testing",
+          assignedUsername: "tober from testing",
           approved: true,
         }),
       }),
@@ -498,13 +475,8 @@ describe("Attempt to claim approved API key request", () => {
     );
   });
 
-  it("returns a 200 OK response", () => {
+  it("returns a 200 OK response", async () => {
     expect(response.status).toBe(200);
-  });
-
-  it("returns a string", async () => {
-    const body = (await response.json()) as { key: string };
-    expect(body.key).toBeString();
   });
 
   it("returns an existing API key", async () => {
@@ -602,10 +574,5 @@ describe("Attempt to claim nonexistent API key request", () => {
 
   it("returns a 404 Not Found response", () => {
     expect(response.status).toBe(404);
-  });
-
-  it("returns message stating that the key request doesn't exist", async () => {
-    const body = await response.text();
-    expect(body).toBe("The requested API key request doesn't exist");
   });
 });

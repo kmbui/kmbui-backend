@@ -4,7 +4,7 @@ import { magazines, Magazine } from "./models";
 import { eq, and } from "drizzle-orm";
 import { authPlugin } from "../plugins/auth";
 
-const Magazine = t.Object({
+const MagazineSchema = t.Object({
   id: t.Number(),
   title: t.String(),
   description: t.String(),
@@ -15,6 +15,7 @@ const Magazine = t.Object({
   createdAt: t.Date(),
   deletedAt: t.Nullable(t.Date()),
 });
+
 export async function magazineController(db: LibSQLDatabase) {
   return new Elysia().group(
     "/magazines",
@@ -43,41 +44,50 @@ export async function magazineController(db: LibSQLDatabase) {
             return fetchedMagazines;
           },
           {
-            response: t.Array(Magazine),
+            response: t.Array(MagazineSchema),
           },
         )
         .get(
           "/:id",
           async ({ params: { id }, store: { db }, role }) => {
-            // Same thing as the fetch-all endpoint
             const fetchedMagazines = await db
               .select()
               .from(magazines)
               .where(eq(magazines.id, id));
 
             if (fetchedMagazines.length == 0) {
-              return status(404, "Not Found");
+              return status(404, null);
             } else if (fetchedMagazines.length > 1) {
-              return status(500, "Internal Server Error");
+              return status(500, null);
             }
 
             const targetMagazine = fetchedMagazines[0];
 
+            // Same thing as the fetch-all endpoint
             if (targetMagazine.status !== "published" && role !== "admin") {
-              return status(403, "Forbidden");
+              return status(403, null);
             }
 
             return targetMagazine;
           },
           {
             params: t.Object({ id: t.Number() }),
-            response: { 200: Magazine, 404: t.Any(), 500: t.Any() },
+            response: {
+              200: MagazineSchema,
+              403: t.Null(),
+              404: t.Null(),
+              500: t.Null(),
+            },
           },
         )
         .post(
           "/",
           ({ store: { db }, body: { title, description, thumbnailUrl } }) => {
-            db.insert(magazines).values({ title, description, thumbnailUrl });
+            db.insert(magazines).values({
+              title,
+              description,
+              thumbnailUrl,
+            } as Magazine);
           },
           {
             body: t.Object({
