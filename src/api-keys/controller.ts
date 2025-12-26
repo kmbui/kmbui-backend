@@ -1,5 +1,5 @@
 import { LibSQLDatabase } from "drizzle-orm/libsql";
-import { count, DrizzleQueryError, eq } from "drizzle-orm";
+import { DrizzleQueryError, eq } from "drizzle-orm";
 import Elysia, { status, t } from "elysia";
 import { key_requests, api_keys } from "./models";
 import {
@@ -221,14 +221,11 @@ export function apiKeyController(db: LibSQLDatabase) {
             .from(key_requests)
             .where(eq(key_requests.receipt, receipt));
 
-          // If there are duplicate key requests, throw an internal server error
-          if (result.length > 1) {
+          if (result.length == 0) {
             return status(
-              500,
-              "More than one key request corresponds to the provided receipt. Please contact the administrator",
+              404,
+              "key request with the provided receipt doesn't exist",
             );
-          } else if (result.length == 0) {
-            return status(404, null);
           }
 
           // If there is only one key request, keep it
@@ -236,7 +233,7 @@ export function apiKeyController(db: LibSQLDatabase) {
 
           // If the key request has been denied, inform the user
           if (targetKeyRequest.status == "denied") {
-            return status(200, "Your API key request has been denied");
+            return status(200, "your API key request has been denied");
           }
 
           // Verify that the user provided password is equal to the one provided during request creation
@@ -246,7 +243,7 @@ export function apiKeyController(db: LibSQLDatabase) {
           );
 
           if (!isAuthenticated) {
-            return status(401, null);
+            return status(401, "the user provided password is invalid");
           }
 
           // Fetch API key corresponding to the proper key request
@@ -255,15 +252,10 @@ export function apiKeyController(db: LibSQLDatabase) {
             .from(api_keys)
             .where(eq(api_keys.requestId, targetKeyRequest.id));
 
-          if (apiKeyRequestResult.length > 1) {
-            return status(
-              500,
-              "More than one API key corresponds to the provided request ID. Please contact the administrator",
-            );
-          } else if (apiKeyRequestResult.length == 0) {
+          if (apiKeyRequestResult.length == 0) {
             return status(
               404,
-              "No API key with the provided request ID was found",
+              "no API key with the provided request ID was found",
             );
           }
 
@@ -272,10 +264,15 @@ export function apiKeyController(db: LibSQLDatabase) {
         {
           body: t.Object({ receipt: t.String(), password: t.String() }),
           response: {
-            200: t.Union([t.Object({ key: t.String() }), t.String()]),
-            401: t.Any(),
-            404: t.Any(),
-            500: t.Any(),
+            200: t.Union([
+              t.Object({ key: t.String() }),
+              t.Literal("your API key request has been denied"),
+            ]),
+            401: t.Literal("the user provided password is invalid"),
+            404: t.Union([
+              t.Literal("no API key with the provided request ID was found"),
+              t.Literal("key request with the provided receipt doesn't exist"),
+            ]),
           },
         },
       ),

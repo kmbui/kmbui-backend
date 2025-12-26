@@ -57,12 +57,6 @@ export async function validateAdminUser(
       status: 401,
       message: "Provided admin credentials are invalid",
     } as ErrorResponse;
-  } else if (result.length > 1) {
-    return {
-      status: 500,
-      message:
-        "More than one admin user has the same credentials. Please contact administrator",
-    } as ErrorResponse;
   }
 
   const isValidAdmin = await Bun.password.verify(

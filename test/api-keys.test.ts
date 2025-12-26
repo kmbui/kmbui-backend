@@ -552,7 +552,7 @@ describe("Attempt to claim denied API key request", () => {
 
   it("returns a message stating that key request has been denied", async () => {
     const body = await response.text();
-    expect(body).toBe("Your API key request has been denied");
+    expect(body).toBe("your API key request has been denied");
   });
 });
 
