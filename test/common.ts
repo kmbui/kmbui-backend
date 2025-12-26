@@ -34,3 +34,30 @@ export function setupApp(): [LibSQLDatabase, KMBUIBackendApp] {
 
   return [db, app];
 }
+
+export namespace CommonMockData {
+  export const validAdminAuthHeader = "Basic YWRtaW46YWRtaW4xMjM=";
+  export const invalidAdminAuthHeader = "Basic YWRtaW46aW52YWxpZDEyMw==";
+  export const validApiKey = "abc123";
+}
+
+export namespace APIKeyMockData {}
+
+export namespace MagazineMockData {
+  const magazineThumbnail = Bun.file("test/files/parmit-26-thumbnail.jpg");
+  const magazineFile = Bun.file("test/files/parmit-26.pdf");
+
+  export const validMagazineFormData = new FormData();
+  validMagazineFormData.append("title", "Paramita 26");
+  validMagazineFormData.append(
+    "description",
+    "This edition includes brainrot avoidance advice. Read at your own risk",
+  );
+  validMagazineFormData.append(
+    "thumbnail",
+    magazineThumbnail,
+    "parmit-26-thumbnail.png",
+  );
+  validMagazineFormData.append("file", magazineFile, "parmit-26.pdf");
+  validMagazineFormData.append("saveFileAs", "parmit-26.pdf");
+}
