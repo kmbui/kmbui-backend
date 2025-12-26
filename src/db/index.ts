@@ -14,9 +14,11 @@ export const db = drizzle({
   } as Config,
 });
 
-export const s3Client = new S3Client({
+export const s3Creds = {
   accessKeyId: process.env.S3_ACCESS_KEY_ID,
   secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
   bucket: process.env.BUCKET_NAME,
   endpoint: process.env.S3_ENDPOINT,
-});
+};
+
+export const s3Client = new S3Client(s3Creds);
