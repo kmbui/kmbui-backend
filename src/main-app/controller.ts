@@ -4,6 +4,7 @@ import { errorHandler } from "../plugins/error";
 import Elysia from "elysia";
 import { LibSQLDatabase } from "drizzle-orm/libsql";
 import { magazineController } from "../magazines/controller";
+import { articleController } from "../article/controller";
 
 export const apiMetadata = {
   name: "REST API to KMBUI's backend",
@@ -16,6 +17,7 @@ export function createApp(db: LibSQLDatabase) {
     .get("/", () => apiMetadata, { detail: { tags: ["General"] } })
     .use(apiKeyController(db))
     .use(magazineController(db))
+    .use(articleController(db))
     .use(
       openapi({
         path: "/openapi",
