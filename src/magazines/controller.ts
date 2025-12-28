@@ -80,7 +80,6 @@ export async function magazineController(db: LibSQLDatabase) {
             }
 
             const presignedUrl = s3Client.presign(targetMagazine.resourceUri, {
-              region: "garage",
               expiresIn: 30,
             });
 
@@ -113,12 +112,12 @@ export async function magazineController(db: LibSQLDatabase) {
             body: { title, description, thumbnail, saveFileAs, file },
           }) => {
             const resourceUri = `magazines/${saveFileAs}`;
-            await s3Client.write(resourceUri, file, { region: "garage" });
+            await s3Client.write(resourceUri, file);
 
-            const rawFileName = basename(saveFileAs);
             const fileExtension = extname(saveFileAs);
+            const rawFileName = basename(saveFileAs, fileExtension);
             const thumbnailUri = `magazines/thumbnails/${rawFileName.concat("-thumbnail", fileExtension)}`;
-            await s3Client.write(thumbnailUri, thumbnail, { region: "garage" });
+            await s3Client.write(thumbnailUri, thumbnail);
 
             const insertValues: InsertMagazine = {
               title,

@@ -68,7 +68,6 @@ export async function articleController(db: LibSQLDatabase) {
             }
 
             const presignedUrl = s3Client.presign(targetArticle.contentUri, {
-              region: "garage",
               expiresIn: 30,
             });
 
@@ -108,12 +107,13 @@ export async function articleController(db: LibSQLDatabase) {
             },
           }) => {
             const contentUri = `articles/${saveFileAs}`;
-            await s3Client.write(contentUri, content, { region: "garage" });
+            await s3Client.write(contentUri, content);
 
-            const rawFileName = basename(saveFileAs);
+            // Only fetch the file name without extensions, then append -thumbnail
             const fileExtension = extname(saveFileAs);
+            const rawFileName = basename(saveFileAs, fileExtension);
             const thumbnailUri = `articles/thumbnails/${rawFileName.concat("-thumbnail", fileExtension)}`;
-            await s3Client.write(thumbnailUri, thumbnail, { region: "garage" });
+            await s3Client.write(thumbnailUri, thumbnail);
 
             const insertValues: InsertArticle = {
               title,
