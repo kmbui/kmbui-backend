@@ -1,14 +1,7 @@
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { t } from "elysia";
-
-const timestamps = {
-  updatedAt: integer("updated_at", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .default(sql`(unixepoch())`)
-    .notNull(),
-  deletedAt: integer("deleted_at", { mode: "timestamp" }),
-};
+import { timestamps } from "../common-utils/model-utils";
 
 export const magazines = sqliteTable("magazines", {
   id: integer().primaryKey({ autoIncrement: true }),
