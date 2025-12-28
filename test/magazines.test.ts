@@ -30,7 +30,7 @@ describe("Create a valid magazine", () => {
         headers: {
           Authorization: CommonMockData.validAdminAuthHeader,
         },
-        body: MagazineMockData.validArticleFormData,
+        body: MagazineMockData.validMagazineFormData,
       }),
     );
 
@@ -104,7 +104,7 @@ describe("Fetch data on one magazine", () => {
         new Request(`${BASE_URL}/magazines`, {
           method: "POST",
           headers: { Authorization: CommonMockData.validAdminAuthHeader },
-          body: MagazineMockData.validArticleFormData,
+          body: MagazineMockData.validMagazineFormData,
         }),
       )
       .then((res) => res.json());
@@ -179,7 +179,7 @@ describe("Publishing a magazine as an admin", async () => {
         new Request(`${BASE_URL}/magazines`, {
           method: "POST",
           headers: { Authorization: CommonMockData.validAdminAuthHeader },
-          body: MagazineMockData.validArticleFormData,
+          body: MagazineMockData.validMagazineFormData,
         }),
       )
       .then((res) => res.json());
@@ -259,7 +259,7 @@ describe("Fetching a magazine draft as a user", async () => {
       new Request(`${BASE_URL}/magazines`, {
         method: "POST",
         headers: { Authorization: CommonMockData.validAdminAuthHeader },
-        body: MagazineMockData.validArticleFormData,
+        body: MagazineMockData.validMagazineFormData,
       }),
     );
 
@@ -316,7 +316,7 @@ describe("Attempt to publish a magazine as user", async () => {
         new Request(`${BASE_URL}/magazines`, {
           method: "POST",
           headers: { Authorization: CommonMockData.validAdminAuthHeader },
-          body: MagazineMockData.validArticleFormData,
+          body: MagazineMockData.validMagazineFormData,
         }),
       )
       .then((res) => res.json());

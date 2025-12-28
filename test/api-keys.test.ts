@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 import { apiMetadata } from "../src/main-app/controller";
 import { eq, count } from "drizzle-orm";
 import { api_keys, key_requests, KeyRequest } from "../src/api-keys/models";
-import { BASE_URL, setupApp } from "./common";
+import { BASE_URL, CommonMockData, setupApp } from "./common";
 
 const [db, app] = setupApp();
 
@@ -106,7 +106,7 @@ describe("Fetch all API key requests with valid admin credentials", () => {
     response = await app.handle(
       new Request(`${BASE_URL}/key-requests`, {
         method: "GET",
-        headers: { Authorization: "Basic YWRtaW46YWRtaW4xMjM=" },
+        headers: { Authorization: CommonMockData.validAdminAuthHeader },
       }),
     );
   });

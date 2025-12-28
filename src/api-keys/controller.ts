@@ -79,7 +79,7 @@ export function apiKeyController(db: LibSQLDatabase) {
                 requesterName: key_requests.requesterName,
                 requestDescription: key_requests.requestDescription,
                 receipt: key_requests.receipt,
-                createdAt: key_requests.created_at,
+                createdAt: key_requests.createdAt,
               })
               .from(key_requests)
               .where(eq(key_requests.status, "pending"));
