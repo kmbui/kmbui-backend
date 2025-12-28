@@ -39,6 +39,7 @@ authorization header along with every request for resources.
 | S3_ENDPOINT          | URL to S3 compatible object storage                 |
 | S3_ACCESS_KEY_ID     | S3 compatible object storage's access key ID        |
 | S3_SECRET_ACCESS_KEY | S3 compatible object storage's secret access key    |
+| S3_REGION            | S3 compatible object storage's region               |
 | BUCKET_NAME          | Bucket where all KMBUI backend documents are stored |
 
 ### Local testing
