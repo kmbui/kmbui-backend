@@ -21,7 +21,7 @@ export async function magazineController(db: LibSQLDatabase) {
       app
         .use(authPlugin(db))
         .get(
-          "/",
+          "",
           async ({ store: { db }, role }) => {
             // Users can fetch published magazines only, but admins can fetch drafts and archived magazines
             const condition =
@@ -107,7 +107,7 @@ export async function magazineController(db: LibSQLDatabase) {
           },
         )
         .post(
-          "/",
+          "",
           async ({
             store: { db },
             body: { title, description, thumbnail, saveFileAs, file },
@@ -161,6 +161,7 @@ export async function magazineController(db: LibSQLDatabase) {
             }
           },
           {
+            parse: ["multipart/form-data"],
             body: t.Object({
               title: t.String(),
               description: t.String(),

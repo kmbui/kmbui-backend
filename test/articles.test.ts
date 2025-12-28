@@ -1,60 +1,62 @@
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import { beforeEach, describe, expect, it } from "bun:test";
 import { t } from "elysia";
-import { FinalMagazineSchema, magazines } from "../src/magazines/models";
-import { BASE_URL, CommonMockData, MagazineMockData, setupApp } from "./common";
+import { articles, FinalArticleSchema } from "../src/article/models";
+import { BASE_URL, CommonMockData, ArticleMockData, setupApp } from "./common";
 import { eq } from "drizzle-orm";
 import { api_keys, key_requests } from "../src/api-keys/models";
 
 const [db, app] = setupApp();
 
-const ReturnedMagazineSchema = t.Object({
+const ReturnedArticleSchema = t.Object({
   id: t.Number(),
   title: t.String(),
-  description: t.String(),
+  subtitle: t.String(),
+  theme: t.String(),
+  writer: t.String(),
   thumbnailUri: t.String(),
-  resourceUri: t.String(),
+  contentUri: t.String(),
   status: t.String(),
 });
 
-const validator = TypeCompiler.Compile(ReturnedMagazineSchema);
+const validator = TypeCompiler.Compile(ReturnedArticleSchema);
 
 // INFO: Happy paths
-describe("Create a valid magazine", () => {
+describe("Create a valid article", () => {
   let body: any;
 
   beforeEach(async () => {
     const response: Response = await app.handle(
-      new Request(`${BASE_URL}/magazines`, {
+      new Request(`${BASE_URL}/articles`, {
         method: "POST",
         headers: {
           Authorization: CommonMockData.validAdminAuthHeader,
         },
-        body: MagazineMockData.validArticleFormData,
+        body: ArticleMockData.validArticleFormData,
       }),
     );
 
     body = await response.json();
   });
 
-  it("returns the magazine's metadata", () => {
+  it("returns the article's metadata", () => {
     const isValid = validator.Check(body);
 
     expect(isValid).toBe(true);
   });
 
   it("creates an entry in the database", async () => {
-    const record = await db.select().from(magazines).limit(1);
+    const record = await db.select().from(articles).limit(1);
 
     expect(record[0]).not.toBeNull();
   });
 });
 
-describe("Fetch all magazines", () => {
+describe("Fetch all articles", () => {
   let body: any;
   beforeEach(async () => {
     const response = await app.handle(
-      new Request(`${BASE_URL}/magazines`, {
+      new Request(`${BASE_URL}/articles`, {
         headers: { Authorization: CommonMockData.validAdminAuthHeader },
       }),
     );
@@ -62,7 +64,7 @@ describe("Fetch all magazines", () => {
     body = await response.json();
   });
 
-  it("returns a list of magazine metadata", async () => {
+  it("returns a list of article metadata", async () => {
     expect(body).toBeArray();
   });
 
@@ -85,7 +87,7 @@ describe("Fetch all magazines", () => {
     });
 
     const response = await app.handle(
-      new Request(`${BASE_URL}/magazines`, {
+      new Request(`${BASE_URL}/articles`, {
         headers: { "X-Api-key": CommonMockData.validApiKey },
       }),
     );
@@ -94,24 +96,24 @@ describe("Fetch all magazines", () => {
   });
 });
 
-describe("Fetch data on one magazine", () => {
+describe("Fetch data on one article", () => {
   let body: any;
   let created: any;
 
   beforeEach(async () => {
     created = await app
       .handle(
-        new Request(`${BASE_URL}/magazines`, {
+        new Request(`${BASE_URL}/articles`, {
           method: "POST",
           headers: { Authorization: CommonMockData.validAdminAuthHeader },
-          body: MagazineMockData.validArticleFormData,
+          body: ArticleMockData.validArticleFormData,
         }),
       )
       .then((res) => res.json());
 
     body = await app
       .handle(
-        new Request(`${BASE_URL}/magazines/${created.id}`, {
+        new Request(`${BASE_URL}/articles/${created.id}`, {
           headers: { Authorization: CommonMockData.validAdminAuthHeader },
         }),
       )
@@ -119,13 +121,13 @@ describe("Fetch data on one magazine", () => {
   });
 
   it("returns the correct type", () => {
-    const validator = TypeCompiler.Compile(FinalMagazineSchema);
+    const validator = TypeCompiler.Compile(FinalArticleSchema);
     const isValid = validator.Check(body);
 
     expect(isValid).toBe(true);
   });
 
-  it("returns the magazine's metadata", () => {
+  it("returns the article's metadata", () => {
     // Verify the fetched metadata matches what we created
     expect(body.metadata.id).toEqual(created.id);
     expect(body.metadata.title).toEqual(created.title);
@@ -156,14 +158,14 @@ describe("Fetch data on one magazine", () => {
       requestId: keyRequest[0].requestld,
     });
 
-    // Set magazine status to 'published' before fetching
+    // Set article status to 'published' before fetching
     await db
-      .update(magazines)
+      .update(articles)
       .set({ status: "published" })
-      .where(eq(magazines.id, created.id));
+      .where(eq(articles.id, created.id));
 
     const response = await app.handle(
-      new Request(`${BASE_URL}/magazines/${created.id}`, {
+      new Request(`${BASE_URL}/articles/${created.id}`, {
         headers: { "X-Api-key": CommonMockData.validApiKey },
       }),
     );
@@ -172,53 +174,53 @@ describe("Fetch data on one magazine", () => {
   });
 });
 
-describe("Publishing a magazine as an admin", async () => {
-  it("changes the magazine's status from draft to published", async () => {
+describe("Publishing a article as an admin", async () => {
+  it("changes the article's status from draft to published", async () => {
     const created = await app
       .handle(
-        new Request(`${BASE_URL}/magazines`, {
+        new Request(`${BASE_URL}/articles`, {
           method: "POST",
           headers: { Authorization: CommonMockData.validAdminAuthHeader },
-          body: MagazineMockData.validArticleFormData,
+          body: ArticleMockData.validArticleFormData,
         }),
       )
       .then((res) => res.json());
 
     const response = await app.handle(
-      new Request(`${BASE_URL}/magazines/${created.id}/publish`, {
+      new Request(`${BASE_URL}/articles/${created.id}/publish`, {
         method: "PUT",
         headers: { Authorization: CommonMockData.validAdminAuthHeader },
       }),
     );
 
-    const publishedMagazine = await db
-      .select({ status: magazines.status })
-      .from(magazines)
-      .where(eq(magazines.id, created.id))
+    const publishedarticle = await db
+      .select({ status: articles.status })
+      .from(articles)
+      .where(eq(articles.id, created.id))
       .limit(1);
 
     expect(response.status).toBe(204);
-    expect(publishedMagazine[0].status).toBe("published");
+    expect(publishedarticle[0].status).toBe("published");
   });
 });
 
 // INFO: Sad paths :(
 describe("Accessing a protected endpoint without credentials", async () => {
-  const response = await app.handle(new Request(`${BASE_URL}/magazines`));
+  const response = await app.handle(new Request(`${BASE_URL}/articles`));
   it("Throws a 401 Unauthorized error", () => {
     expect(response.status).toBe(401);
   });
 });
 
-describe("Accessing GET /magazines endpoint with invalid credentials", async () => {
+describe("Accessing GET /articles endpoint with invalid credentials", async () => {
   it("rejects requests without either admin credentials or an API key", async () => {
-    const response = await app.handle(new Request(`${BASE_URL}/magazines`));
+    const response = await app.handle(new Request(`${BASE_URL}/articles`));
     expect(response.status).toBe(401);
   });
 
   it("rejects requests with an invalid API key", async () => {
     const response = await app.handle(
-      new Request(`${BASE_URL}/magazines`, {
+      new Request(`${BASE_URL}/articles`, {
         headers: { "X-Api-key": "invalid-api-key" },
       }),
     );
@@ -227,7 +229,7 @@ describe("Accessing GET /magazines endpoint with invalid credentials", async () 
 
   it("rejects requests with invalid admin credentials", async () => {
     const response = await app.handle(
-      new Request(`${BASE_URL}/magazines`, {
+      new Request(`${BASE_URL}/articles`, {
         headers: { Authorization: CommonMockData.invalidAdminAuthHeader },
       }),
     );
@@ -235,7 +237,7 @@ describe("Accessing GET /magazines endpoint with invalid credentials", async () 
   });
 });
 
-describe("Fetching a magazine draft as a user", async () => {
+describe("Fetching a article draft as a user", async () => {
   it("returns a 403 Forbidden response", async () => {
     // Create an API key to use
     const passwordHash = await Bun.password.hash("admin123");
@@ -256,19 +258,19 @@ describe("Fetching a magazine draft as a user", async () => {
     });
 
     const creationResponse = await app.handle(
-      new Request(`${BASE_URL}/magazines`, {
+      new Request(`${BASE_URL}/articles`, {
         method: "POST",
         headers: { Authorization: CommonMockData.validAdminAuthHeader },
-        body: MagazineMockData.validArticleFormData,
+        body: ArticleMockData.validArticleFormData,
       }),
     );
 
-    type ReturnedMagazine = typeof ReturnedMagazineSchema.static;
+    type Returnedarticle = typeof ReturnedArticleSchema.static;
 
-    const created: ReturnedMagazine = await creationResponse.json();
+    const created: Returnedarticle = await creationResponse.json();
 
     const response = await app.handle(
-      new Request(`${BASE_URL}/magazines/${created.id}`, {
+      new Request(`${BASE_URL}/articles/${created.id}`, {
         headers: { "X-Api-key": CommonMockData.validApiKey },
       }),
     );
@@ -279,11 +281,11 @@ describe("Fetching a magazine draft as a user", async () => {
   });
 });
 
-describe("Fetching a magazine that doesn't exist", async () => {
+describe("Fetching a article that doesn't exist", async () => {
   it("returns a 404 response", async () => {
     const INVALID_ID: number = -1;
     const response = await app.handle(
-      new Request(`${BASE_URL}/magazines/${INVALID_ID}`, {
+      new Request(`${BASE_URL}/articles/${INVALID_ID}`, {
         headers: { Authorization: CommonMockData.validAdminAuthHeader },
       }),
     );
@@ -292,7 +294,7 @@ describe("Fetching a magazine that doesn't exist", async () => {
   });
 });
 
-describe("Attempt to publish a magazine as user", async () => {
+describe("Attempt to publish a article as user", async () => {
   it("fails with a 403 response code", async () => {
     const passwordHash = await Bun.password.hash("admin123");
     const keyRequest = await db
@@ -313,28 +315,28 @@ describe("Attempt to publish a magazine as user", async () => {
 
     const created = await app
       .handle(
-        new Request(`${BASE_URL}/magazines`, {
+        new Request(`${BASE_URL}/articles`, {
           method: "POST",
           headers: { Authorization: CommonMockData.validAdminAuthHeader },
-          body: MagazineMockData.validArticleFormData,
+          body: ArticleMockData.validArticleFormData,
         }),
       )
       .then((res) => res.json());
 
     const response = await app.handle(
-      new Request(`${BASE_URL}/magazines/${created.id}/publish`, {
+      new Request(`${BASE_URL}/articles/${created.id}/publish`, {
         method: "PUT",
         headers: { "X-Api-key": CommonMockData.validApiKey },
       }),
     );
 
-    const publishedMagazine = await db
-      .select({ status: magazines.status })
-      .from(magazines)
-      .where(eq(magazines.id, created.id))
+    const publishedarticle = await db
+      .select({ status: articles.status })
+      .from(articles)
+      .where(eq(articles.id, created.id))
       .limit(1);
 
     expect(response.status).toBe(403);
-    expect(publishedMagazine[0].status).toBe("draft");
+    expect(publishedarticle[0].status).toBe("draft");
   });
 });

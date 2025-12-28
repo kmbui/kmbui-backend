@@ -61,3 +61,26 @@ export namespace MagazineMockData {
   validMagazineFormData.append("file", magazineFile, "parmit-26.pdf");
   validMagazineFormData.append("saveFileAs", "parmit-26.pdf");
 }
+
+export namespace ArticleMockData {
+  const articleThumbnail = Bun.file(
+    "test/files/brainrot-avoidance-thumbnail.jpg",
+  );
+  const articleFile = Bun.file("test/files/brainrot-avoidance.md");
+
+  export const validArticleFormData = new FormData();
+  validArticleFormData.append("title", "How to effectively avoid brainrot?");
+  validArticleFormData.append(
+    "subtitle",
+    "Proven and unproven ways of avoiding brainrot, brought to you by experts in the field",
+  );
+  validArticleFormData.append("theme", "Self Help");
+  validArticleFormData.append("writer", "Yo Boi Joe");
+  validArticleFormData.append(
+    "thumbnail",
+    articleThumbnail,
+    "brainrot-avoidance-thumbnail.jpg",
+  );
+  validArticleFormData.append("content", articleFile, "brainrot-avoidance.md");
+  validArticleFormData.append("saveFileAs", "brainrot-avoidance.md");
+}

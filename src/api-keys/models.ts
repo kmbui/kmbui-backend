@@ -1,11 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
-
-const timestamps = {
-  updated_at: integer({ mode: "timestamp" }),
-  created_at: integer({ mode: "timestamp" }).default(new Date()).notNull(),
-  deleted_at: integer({ mode: "timestamp" }),
-};
+import { timestamps } from "../common-utils/model-utils";
 
 export const key_requests = sqliteTable("key_requests", {
   id: integer().primaryKey({ autoIncrement: true }),
