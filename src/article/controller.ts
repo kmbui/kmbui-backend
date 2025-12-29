@@ -22,29 +22,43 @@ export async function articleController(db: LibSQLDatabase) {
     (app) =>
       app
         .use(authPlugin(db))
-        .get("", async ({ store: { db }, role }) => {
-          // Users can fetch published articles only, but admins can fetch drafts and archived articles
-          const condition =
-            role === "user"
-              ? eq(articles.status, "published")
-              : or(
-                  eq(articles.status, "published"),
-                  eq(articles.status, "draft"),
-                  eq(articles.status, "archived"),
-                );
+        .get(
+          "",
+          async ({ store: { db }, role }) => {
+            // Users can fetch published articles only, but admins can fetch drafts and archived articles
+            const condition =
+              role === "user"
+                ? eq(articles.status, "published")
+                : or(
+                    eq(articles.status, "published"),
+                    eq(articles.status, "draft"),
+                    eq(articles.status, "archived"),
+                  );
 
-          let fetchedArticles: TypeboxArticle[];
-          try {
-            fetchedArticles = await db.select().from(articles).where(condition);
-          } catch {
-            return status(
-              500,
-              "an unknown error occurred when fetching articles",
-            );
-          }
+            let fetchedArticles: TypeboxArticle[];
+            try {
+              fetchedArticles = await db
+                .select()
+                .from(articles)
+                .where(condition);
+            } catch {
+              return status(
+                500,
+                "an unknown error occurred when fetching articles",
+              );
+            }
 
-          return fetchedArticles;
-        })
+            return fetchedArticles;
+          },
+          {
+            response: {
+              200: t.Array(ArticleSchema),
+              500: t.Literal(
+                "an unknown error occurred when fetching articles",
+              ),
+            },
+          },
+        )
         .get(
           "/:id",
           async ({ params: { id }, role }) => {

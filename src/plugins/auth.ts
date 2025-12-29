@@ -11,7 +11,7 @@ export const authPlugin = (db: LibSQLDatabase) =>
     let role: Role;
 
     if (request.headers.has("authorization")) {
-      // This branch checks for user credentialtestss
+      // This branch checks for user credentials
       const authHeader = request.headers.get("authorization")!;
 
       const { errorResponse, credentials } = getCredsFromHeader(authHeader);
