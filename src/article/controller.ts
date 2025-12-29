@@ -147,7 +147,10 @@ export async function articleController(db: LibSQLDatabase) {
             // Only fetch the file name without extensions, then append -thumbnail
             const fileExtension = extname(saveFileAs);
             const rawFileName = basename(saveFileAs, fileExtension);
-            const thumbnailUri = `articles/thumbnails/${rawFileName.concat("-thumbnail", fileExtension)}`;
+
+            // Replace it with the thumbnail's proper file extension
+            const thumbnailFileExtension = extname((thumbnail as File).name);
+            const thumbnailUri = `articles/thumbnails/${rawFileName.concat("-thumbnail", thumbnailFileExtension)}`;
             await s3Client.write(thumbnailUri, thumbnail);
 
             const insertValues: InsertArticle = {
@@ -298,14 +301,21 @@ export async function articleController(db: LibSQLDatabase) {
               }
 
               // Update article thumbnail or sync with name
-              const rawFileName = basename(body.saveFileAs);
               const fileExtension = extname(body.saveFileAs);
-              const thumbnailUri = `articles/thumbnails/${rawFileName.concat("-thumbnail", fileExtension)}`;
-              updates.thumbnailUri = thumbnailUri;
+              const rawFileName = basename(body.saveFileAs, fileExtension);
 
               if (body.thumbnail) {
+                const thumbnailFileExtension = extname(
+                  (body.thumbnail as File).name,
+                );
+                const thumbnailUri = `articles/thumbnails/${rawFileName.concat("-thumbnail", thumbnailFileExtension)}`;
+                updates.thumbnailUri = thumbnailUri;
+
                 await s3Client.write(thumbnailUri, body.thumbnail);
               } else {
+                const oldThumbnailFileExtension = extname(oldArticle.tUri);
+                const thumbnailUri = `articles/thumbnails/${rawFileName.concat("-thumbnail", oldThumbnailFileExtension)}`;
+
                 // Rewrite old file with new name
                 const thumbnailFile = s3Client.file(oldArticle.tUri);
                 await s3Client.delete(oldArticle.tUri);

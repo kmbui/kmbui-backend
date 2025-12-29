@@ -136,9 +136,13 @@ export async function magazineController(db: LibSQLDatabase) {
             const resourceUri = `magazines/${saveFileAs}`;
             await s3Client.write(resourceUri, file);
 
+            // Pluck the content file's extension off
             const fileExtension = extname(saveFileAs);
             const rawFileName = basename(saveFileAs, fileExtension);
-            const thumbnailUri = `magazines/thumbnails/${rawFileName.concat("-thumbnail", fileExtension)}`;
+
+            // Replace it with the thumbnail's proper file extension
+            const thumbnailFileExtension = extname((thumbnail as File).name);
+            const thumbnailUri = `magazines/thumbnails/${rawFileName.concat("-thumbnail", thumbnailFileExtension)}`;
             await s3Client.write(thumbnailUri, thumbnail);
 
             const insertValues: InsertMagazine = {
