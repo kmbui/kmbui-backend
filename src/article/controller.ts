@@ -5,15 +5,16 @@ import { basename, extname } from "node:path";
 import { s3Client } from "../db";
 import { authPlugin } from "../plugins/auth";
 import {
+  ArticlePreviewSchema,
   articles,
   ArticleSchema,
+  ArticleWithThumbnailURL,
   ArticleWithURL,
   FinalArticleSchema,
   InsertArticle,
   SelectArticle,
   TypeboxArticle,
 } from "./models";
-import { S3Client } from "bun";
 
 export async function articleController(db: LibSQLDatabase) {
   return new Elysia().group(
@@ -35,7 +36,7 @@ export async function articleController(db: LibSQLDatabase) {
                     eq(articles.status, "archived"),
                   );
 
-            let fetchedArticles: TypeboxArticle[];
+            let fetchedArticles: SelectArticle[];
             try {
               fetchedArticles = await db
                 .select()
@@ -48,11 +49,23 @@ export async function articleController(db: LibSQLDatabase) {
               );
             }
 
-            return fetchedArticles;
+            let fetchedArticlesWithThumbnails: ArticleWithThumbnailURL[] = [];
+            fetchedArticles.forEach((article: SelectArticle) => {
+              const thumbnailUrl = s3Client.presign(article.thumbnailUri, {
+                expiresIn: 30,
+              });
+
+              fetchedArticlesWithThumbnails.push({
+                metadata: article,
+                thumbnailUrl,
+              } as ArticleWithThumbnailURL);
+            });
+
+            return fetchedArticlesWithThumbnails;
           },
           {
             response: {
-              200: t.Array(ArticleSchema),
+              200: t.Array(ArticlePreviewSchema),
               500: t.Literal(
                 "an unknown error occurred when fetching articles",
               ),
@@ -87,8 +100,16 @@ export async function articleController(db: LibSQLDatabase) {
 
             const decodedUrl = presignedUrl.replace(/%2F/g, "/");
 
+            const presignedThumbnail = s3Client.presign(
+              targetArticle.thumbnailUri,
+              { expiresIn: 30 },
+            );
+
+            const decodedThumbnailUrl = presignedThumbnail.replace(/%2F/g, "/");
+
             const articleWithPresignedUrl: ArticleWithURL = {
               metadata: targetArticle,
+              thumbnailUrl: decodedThumbnailUrl,
               fileUrl: decodedUrl,
             };
 

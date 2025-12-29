@@ -3,10 +3,12 @@ import Elysia, { status, t } from "elysia";
 import {
   magazines,
   InsertMagazine,
-  MagazineSchema,
+  MagazinePreviewSchema,
   MagazineWithURL,
   FinalMagazineSchema,
   TypeboxMagazine,
+  Magazine,
+  MagazineWithThumbnailURL,
 } from "./models";
 import { eq, or } from "drizzle-orm";
 import { authPlugin } from "../plugins/auth";
@@ -33,7 +35,7 @@ export async function magazineController(db: LibSQLDatabase) {
                     eq(magazines.status, "archived"),
                   );
 
-            let fetchedMagazines: TypeboxMagazine[];
+            let fetchedMagazines: Magazine[];
             try {
               fetchedMagazines = await db
                 .select()
@@ -46,11 +48,23 @@ export async function magazineController(db: LibSQLDatabase) {
               );
             }
 
-            return fetchedMagazines;
+            let fetchedMagazinesWithThumbnails: MagazineWithThumbnailURL[] = [];
+            fetchedMagazines.forEach((magazine: Magazine) => {
+              const thumbnailUrl = s3Client.presign(magazine.thumbnailUri, {
+                expiresIn: 30,
+              });
+
+              fetchedMagazinesWithThumbnails.push({
+                metadata: magazine,
+                thumbnailUrl,
+              } as MagazineWithThumbnailURL);
+            });
+
+            return fetchedMagazinesWithThumbnails;
           },
           {
             response: {
-              200: t.Array(MagazineSchema),
+              200: t.Array(MagazinePreviewSchema),
               500: t.Literal(
                 "an unknown error occurred when fetching magazines",
               ),
@@ -85,8 +99,16 @@ export async function magazineController(db: LibSQLDatabase) {
 
             const decodedUrl = presignedUrl.replace(/%2F/g, "/");
 
+            const presignedThumbnail = s3Client.presign(
+              targetMagazine.thumbnailUri,
+              { expiresIn: 30 },
+            );
+
+            const decodedThumbnailUrl = presignedThumbnail.replace(/%2F/g, "/");
+
             const magazineWithPresignedUrl: MagazineWithURL = {
               metadata: targetMagazine,
+              thumbnailUrl: decodedThumbnailUrl,
               fileUrl: decodedUrl,
             };
 

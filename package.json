@@ -7,10 +7,10 @@
     "dev": "bun run --watch src/index.ts"
   },
   "dependencies": {
-    "@elysiajs/openapi": "^1.4.11",
+    "@elysiajs/openapi": "^1.4.13",
     "@libsql/client": "^0.15.15",
     "@sinclair/typebox": "^0.34.0",
-    "drizzle-kit": "^0.31.7",
+    "drizzle-kit": "^0.31.8",
     "drizzle-orm": "^0.44.7",
     "elysia": "^1.4.19",
     "uuid": "^13.0.0"

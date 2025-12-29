@@ -1,6 +1,4 @@
-import { time } from "drizzle-orm/mysql-core";
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
-import { sql } from "drizzle-orm";
 import { timestamps } from "../common-utils/model-utils";
 import { t } from "elysia";
 
@@ -35,10 +33,17 @@ export const ArticleSchema = t.Object({
   deletedAt: t.Nullable(t.Date()),
 });
 
+export const ArticlePreviewSchema = t.Object({
+  metadata: ArticleSchema,
+  thumbnailUrl: t.String(),
+});
+
 export const FinalArticleSchema = t.Object({
   metadata: ArticleSchema,
+  thumbnailUrl: t.String(),
   fileUrl: t.String(),
 });
 
 export type TypeboxArticle = typeof ArticleSchema.static;
+export type ArticleWithThumbnailURL = typeof ArticlePreviewSchema.static;
 export type ArticleWithURL = typeof FinalArticleSchema.static;
