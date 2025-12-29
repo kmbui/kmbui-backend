@@ -52,7 +52,7 @@ export async function articleController(db: LibSQLDatabase) {
             let fetchedArticlesWithThumbnails: ArticleWithThumbnailURL[] = [];
             fetchedArticles.forEach((article: SelectArticle) => {
               const thumbnailUrl = s3Client.presign(article.thumbnailUri, {
-                expiresIn: 30,
+                expiresIn: 60,
               });
 
               fetchedArticlesWithThumbnails.push({
@@ -95,14 +95,14 @@ export async function articleController(db: LibSQLDatabase) {
             }
 
             const presignedUrl = s3Client.presign(targetArticle.contentUri, {
-              expiresIn: 30,
+              expiresIn: 60,
             });
 
             const decodedUrl = presignedUrl.replace(/%2F/g, "/");
 
             const presignedThumbnail = s3Client.presign(
               targetArticle.thumbnailUri,
-              { expiresIn: 30 },
+              { expiresIn: 60 },
             );
 
             const decodedThumbnailUrl = presignedThumbnail.replace(/%2F/g, "/");

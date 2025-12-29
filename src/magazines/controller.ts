@@ -51,7 +51,7 @@ export async function magazineController(db: LibSQLDatabase) {
             let fetchedMagazinesWithThumbnails: MagazineWithThumbnailURL[] = [];
             fetchedMagazines.forEach((magazine: Magazine) => {
               const thumbnailUrl = s3Client.presign(magazine.thumbnailUri, {
-                expiresIn: 30,
+                expiresIn: 60,
               });
 
               fetchedMagazinesWithThumbnails.push({
@@ -94,14 +94,14 @@ export async function magazineController(db: LibSQLDatabase) {
             }
 
             const presignedUrl = s3Client.presign(targetMagazine.resourceUri, {
-              expiresIn: 30,
+              expiresIn: 60,
             });
 
             const decodedUrl = presignedUrl.replace(/%2F/g, "/");
 
             const presignedThumbnail = s3Client.presign(
               targetMagazine.thumbnailUri,
-              { expiresIn: 30 },
+              { expiresIn: 60 },
             );
 
             const decodedThumbnailUrl = presignedThumbnail.replace(/%2F/g, "/");

@@ -5,7 +5,6 @@ import Elysia from "elysia";
 import { LibSQLDatabase } from "drizzle-orm/libsql";
 import { magazineController } from "../magazines/controller";
 import { articleController } from "../article/controller";
-import cors from "@elysiajs/cors";
 
 export const apiMetadata = {
   name: "REST API to KMBUI's backend",
@@ -14,7 +13,6 @@ export const apiMetadata = {
 
 export function createApp(db: LibSQLDatabase) {
   const app = new Elysia()
-    .use(cors())
     .use(errorHandler)
     .get("/", () => apiMetadata, { detail: { tags: ["General"] } })
     .use(apiKeyController(db))
