@@ -1,8 +1,7 @@
 import { defineConfig } from "drizzle-kit";
 import * as dotenv from "dotenv";
 
-// Default to using .env.local file to store environment variables
-dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
 
 export default defineConfig({
   dialect: "turso",
